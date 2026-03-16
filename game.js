@@ -14,6 +14,8 @@ const boatNameEl = document.getElementById("boat-name");
 const challengeTitleEl = document.getElementById("challenge-title");
 const challengeBodyEl = document.getElementById("challenge-body");
 const shareButtonEl = document.getElementById("share-button");
+const sharePanelEl = document.getElementById("share-panel");
+const sharePreviewEl = document.getElementById("share-preview");
 
 const days = [
   {
@@ -228,6 +230,8 @@ function renderChallengePanel() {
 
 function updateShareButton() {
   shareButtonEl.disabled = !lastResult;
+  sharePanelEl.classList.toggle("hidden", !lastResult);
+  sharePreviewEl.textContent = lastResult ? buildShareText("preview") : "";
 }
 
 function touchesHazard() {
@@ -507,30 +511,249 @@ function buildShareUrl() {
   return url.toString();
 }
 
-function buildShareText() {
+function buildShareTitle() {
+  if (!lastResult) return "Sunrise Sail Challenge";
+  return `Sunrise Sail - ${days[lastResult.dayIndex].name}`;
+}
+
+function buildShareRows() {
+  if (!lastResult) return [];
+
+  const day = days[lastResult.dayIndex];
+  return [
+    "SUNRISE SAIL",
+    `${day.name}`,
+    `${lastResult.captain} aboard ${lastResult.boat}`,
+    "",
+    `TIME   ${formatTime(lastResult.timeMs)}`,
+    `WIND   ${day.windMph} mph`,
+    `WAVES  ${day.waveText}`,
+    `TIDE   ${day.current.toFixed(1)} kt`,
+    "",
+    "Can you beat this line?",
+  ];
+}
+
+function buildShareText(mode = "web") {
   if (!lastResult) return "Race my Sunrise Sail time.";
-  return `${lastResult.captain} on ${lastResult.boat} sailed ${days[lastResult.dayIndex].name} in ${formatTime(lastResult.timeMs)}. Can you beat it?`;
+
+  const rows = buildShareRows();
+  if (mode === "preview") {
+    return rows.join("\n");
+  }
+
+  const summary = `${lastResult.captain} aboard ${lastResult.boat} sailed ${days[lastResult.dayIndex].name} in ${formatTime(lastResult.timeMs)}.`;
+  if (mode === "clipboard") {
+    return `${rows.join("\n")}\n\nRace this run:\n${buildShareUrl()}`;
+  }
+  return `${summary}\n\nCan you beat this line?`;
+}
+
+function drawShareCard() {
+  if (!lastResult) return null;
+
+  const day = days[lastResult.dayIndex];
+  const shareCanvas = document.createElement("canvas");
+  shareCanvas.width = 1200;
+  shareCanvas.height = 630;
+  const shareCtx = shareCanvas.getContext("2d");
+
+  const bg = shareCtx.createLinearGradient(0, 0, 0, 630);
+  bg.addColorStop(0, "#f7c66b");
+  bg.addColorStop(0.38, "#8fd5db");
+  bg.addColorStop(1, "#347f9d");
+  shareCtx.fillStyle = bg;
+  shareCtx.fillRect(0, 0, 1200, 630);
+
+  const glow = shareCtx.createRadialGradient(920, 70, 20, 920, 70, 220);
+  glow.addColorStop(0, "rgba(255, 245, 197, 0.92)");
+  glow.addColorStop(1, "rgba(255, 245, 197, 0)");
+  shareCtx.fillStyle = glow;
+  shareCtx.beginPath();
+  shareCtx.arc(920, 70, 220, 0, Math.PI * 2);
+  shareCtx.fill();
+
+  shareCtx.fillStyle = "rgba(252, 248, 239, 0.9)";
+  roundRect(shareCtx, 40, 40, 1120, 550, 34);
+  shareCtx.fill();
+
+  const panelGradient = shareCtx.createLinearGradient(430, 70, 430, 560);
+  panelGradient.addColorStop(0, "#dff3f1");
+  panelGradient.addColorStop(1, "#4f99ad");
+  shareCtx.fillStyle = panelGradient;
+  roundRect(shareCtx, 420, 70, 700, 490, 26);
+  shareCtx.fill();
+
+  shareCtx.save();
+  shareCtx.beginPath();
+  roundRect(shareCtx, 420, 70, 700, 490, 26);
+  shareCtx.clip();
+  for (let i = 0; i < 8; i += 1) {
+    const y = 120 + i * 58;
+    shareCtx.beginPath();
+    shareCtx.moveTo(420, y);
+    for (let x = 420; x <= 1120; x += 36) {
+      shareCtx.quadraticCurveTo(x + 18, y + 12, x + 36, y);
+    }
+    shareCtx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+    shareCtx.lineWidth = 4;
+    shareCtx.stroke();
+  }
+  shareCtx.restore();
+
+  shareCtx.fillStyle = "#17324d";
+  shareCtx.font = "700 26px Trebuchet MS";
+  shareCtx.fillText("DAILY SAILING SPRINT", 86, 120);
+  shareCtx.font = "700 70px Trebuchet MS";
+  shareCtx.fillText("Sunrise Sail", 82, 190);
+
+  shareCtx.fillStyle = "#5d7182";
+  shareCtx.font = "600 28px Trebuchet MS";
+  shareCtx.fillText(day.name, 86, 240);
+  shareCtx.fillText(`${lastResult.captain} aboard ${lastResult.boat}`, 86, 280);
+
+  shareCtx.fillStyle = "#ff7a45";
+  roundRect(shareCtx, 82, 330, 270, 112, 24);
+  shareCtx.fill();
+  shareCtx.fillStyle = "#ffffff";
+  shareCtx.font = "700 24px Trebuchet MS";
+  shareCtx.fillText("FINISH TIME", 110, 372);
+  shareCtx.font = "700 54px Trebuchet MS";
+  shareCtx.fillText(formatTime(lastResult.timeMs), 108, 426);
+
+  shareCtx.fillStyle = "rgba(23, 50, 77, 0.08)";
+  roundRect(shareCtx, 82, 466, 290, 82, 20);
+  shareCtx.fill();
+  shareCtx.fillStyle = "#17324d";
+  shareCtx.font = "700 22px Trebuchet MS";
+  shareCtx.fillText(`Wind ${day.windMph} mph`, 110, 500);
+  shareCtx.fillText(`Waves ${day.waveText}`, 110, 530);
+
+  drawShareBoat(shareCtx, 605, 365, 1.5);
+
+  shareCtx.strokeStyle = "rgba(248, 251, 255, 0.95)";
+  shareCtx.lineWidth = 10;
+  for (let i = 0; i < 8; i += 1) {
+    shareCtx.beginPath();
+    shareCtx.moveTo(760 + i * 34, 140);
+    shareCtx.lineTo(786 + i * 34, 140);
+    shareCtx.strokeStyle = i % 2 === 0 ? "#f8fbff" : "#244a65";
+    shareCtx.stroke();
+  }
+  shareCtx.fillStyle = "rgba(23, 50, 77, 0.8)";
+  shareCtx.font = "700 30px Trebuchet MS";
+  shareCtx.fillText("Beat this line", 800, 112);
+
+  return shareCanvas;
+}
+
+function roundRect(drawCtx, x, y, width, height, radius) {
+  drawCtx.beginPath();
+  drawCtx.moveTo(x + radius, y);
+  drawCtx.lineTo(x + width - radius, y);
+  drawCtx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  drawCtx.lineTo(x + width, y + height - radius);
+  drawCtx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  drawCtx.lineTo(x + radius, y + height);
+  drawCtx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  drawCtx.lineTo(x, y + radius);
+  drawCtx.quadraticCurveTo(x, y, x + radius, y);
+  drawCtx.closePath();
+}
+
+function drawShareBoat(drawCtx, x, y, scale) {
+  drawCtx.save();
+  drawCtx.translate(x, y);
+  drawCtx.scale(scale, scale);
+  drawCtx.rotate(-0.35);
+
+  drawCtx.globalAlpha = 0.18;
+  drawCtx.strokeStyle = "#ffffff";
+  drawCtx.lineWidth = 5;
+  drawCtx.beginPath();
+  drawCtx.moveTo(0, 28);
+  drawCtx.quadraticCurveTo(0, 54, -14, 74);
+  drawCtx.moveTo(0, 28);
+  drawCtx.quadraticCurveTo(0, 54, 14, 74);
+  drawCtx.stroke();
+  drawCtx.globalAlpha = 1;
+
+  drawCtx.fillStyle = "#f8f2e7";
+  drawCtx.strokeStyle = "#254760";
+  drawCtx.lineWidth = 3;
+  drawCtx.beginPath();
+  drawCtx.moveTo(0, -58);
+  drawCtx.bezierCurveTo(18, -50, 28, -18, 26, 20);
+  drawCtx.bezierCurveTo(24, 46, 14, 66, 0, 72);
+  drawCtx.bezierCurveTo(-14, 66, -24, 46, -26, 20);
+  drawCtx.bezierCurveTo(-28, -18, -18, -50, 0, -58);
+  drawCtx.closePath();
+  drawCtx.fill();
+  drawCtx.stroke();
+
+  drawCtx.strokeStyle = "#2a5775";
+  drawCtx.lineWidth = 4;
+  drawCtx.beginPath();
+  drawCtx.moveTo(0, -44);
+  drawCtx.lineTo(0, 42);
+  drawCtx.stroke();
+
+  drawCtx.fillStyle = "#ff7a45";
+  drawCtx.beginPath();
+  drawCtx.moveTo(0, -34);
+  drawCtx.lineTo(0, 14);
+  drawCtx.lineTo(28, 6);
+  drawCtx.closePath();
+  drawCtx.fill();
+
+  drawCtx.fillStyle = "#fffaf5";
+  drawCtx.beginPath();
+  drawCtx.moveTo(0, -30);
+  drawCtx.lineTo(0, 28);
+  drawCtx.lineTo(-16, 14);
+  drawCtx.lineTo(-16, -10);
+  drawCtx.closePath();
+  drawCtx.fill();
+  drawCtx.restore();
+}
+
+async function canvasToFile(cardCanvas) {
+  if (!cardCanvas || !cardCanvas.toBlob) return null;
+  return new Promise((resolve) => {
+    cardCanvas.toBlob((blob) => {
+      if (!blob) {
+        resolve(null);
+        return;
+      }
+      resolve(new File([blob], "sunrise-sail-share.png", { type: "image/png" }));
+    }, "image/png");
+  });
 }
 
 async function shareChallenge() {
   if (!lastResult) return;
 
+  const cardCanvas = drawShareCard();
+  const imageFile = await canvasToFile(cardCanvas);
   const shareData = {
-    title: "Sunrise Sail Challenge",
-    text: buildShareText(),
+    title: buildShareTitle(),
+    text: buildShareText("web"),
     url: buildShareUrl(),
   };
+  const shareWithFile = imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })
+    ? { ...shareData, files: [imageFile] }
+    : null;
 
   if (navigator.share) {
     try {
-      await navigator.share(shareData);
+      await navigator.share(shareWithFile || shareData);
       return;
     } catch (error) {
       if (error && error.name === "AbortError") return;
     }
   }
 
-  const fallbackText = `${shareData.text} ${shareData.url}`;
+  const fallbackText = buildShareText("clipboard");
   if (navigator.clipboard && navigator.clipboard.writeText) {
     await navigator.clipboard.writeText(fallbackText);
     showMessage("Copied!", "Your challenge link and result text were copied to the clipboard.");
