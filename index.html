@@ -8,8 +8,49 @@
 </head>
 <body>
   <main class="app">
+    <section class="game-panel">
+      <div class="race-bar">
+        <div class="race-copy">
+          <p class="eyebrow">Daily Sailing Sprint</p>
+          <h1 class="mobile-title">Sunrise Sail</h1>
+          <h2 id="day-name-compact">Harbor Dash</h2>
+          <p id="challenge-compact">Set a time, then share it with a friend.</p>
+        </div>
+        <div class="race-stats">
+          <div class="race-stat">
+            <span class="label">Time</span>
+            <strong id="time-display-compact">00:00.0</strong>
+          </div>
+          <div class="race-stat">
+            <span class="label">Target</span>
+            <strong id="target-display-compact">Solo</strong>
+          </div>
+        </div>
+      </div>
+
+      <canvas id="game-canvas" width="900" height="1400" aria-label="Sunrise Sail game area"></canvas>
+
+      <div class="controls">
+        <div class="wheel-wrap">
+          <div id="wheel-control" class="wheel-control" aria-label="Steering wheel" role="slider" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0">
+            <div id="wheel-visual" class="wheel-visual">
+              <span class="wheel-spoke wheel-spoke-a"></span>
+              <span class="wheel-spoke wheel-spoke-b"></span>
+              <span class="wheel-spoke wheel-spoke-c"></span>
+              <span class="wheel-spoke wheel-spoke-d"></span>
+              <span class="wheel-core"></span>
+            </div>
+          </div>
+        </div>
+        <button id="boost-button" class="control-button accent-button trim-button" aria-label="Trim sails">
+          <span class="trim-fill" id="trim-fill"></span>
+          <span class="trim-label">Trim</span>
+        </button>
+      </div>
+    </section>
+
     <section class="hud">
-      <div class="brand">
+      <div class="brand desktop-brand">
         <p class="eyebrow">Daily Sailing Sprint</p>
         <h1>Sunrise Sail</h1>
       </div>
@@ -19,60 +60,57 @@
           <p class="label">Today's Conditions</p>
           <h2 id="day-name">Harbor Dash</h2>
         </div>
-        <button id="new-day-button" class="secondary-button">New Day</button>
-      </div>
-
-      <div class="profile-card">
-        <div class="field">
-          <label class="label" for="captain-name">Captain</label>
-          <input id="captain-name" type="text" maxlength="24" placeholder="Your name" />
-        </div>
-        <div class="field">
-          <label class="label" for="boat-name">Boat</label>
-          <input id="boat-name" type="text" maxlength="24" placeholder="Boat name" />
+        <div class="day-actions">
+          <button id="music-button" class="secondary-button" aria-label="Toggle music">Music On</button>
+          <button id="new-day-button" class="secondary-button">New Day</button>
         </div>
       </div>
 
-      <div class="challenge-card" id="challenge-card">
-        <p class="label">Challenge</p>
-        <h2 id="challenge-title">Solo Run</h2>
-        <p id="challenge-body">Set a time, then share it with a friend.</p>
-      </div>
+      <details class="hud-drawer" id="hud-drawer" open>
+        <summary>Race Details</summary>
+
+        <div class="profile-card">
+          <div class="field">
+            <label class="label" for="captain-name">Captain</label>
+            <input id="captain-name" type="text" maxlength="24" placeholder="Your name" />
+          </div>
+          <div class="field">
+            <label class="label" for="boat-name">Boat</label>
+            <input id="boat-name" type="text" maxlength="24" placeholder="Boat name" />
+          </div>
+        </div>
+
+        <div class="challenge-card" id="challenge-card">
+          <p class="label">Challenge</p>
+          <h2 id="challenge-title">Solo Run</h2>
+          <p id="challenge-body">Set a time, then share it with a friend.</p>
+        </div>
+
+        <div class="conditions" id="conditions"></div>
+
+        <div class="stats">
+          <div class="stat">
+            <span class="label">Time</span>
+            <strong id="time-display">00:00.0</strong>
+          </div>
+          <div class="stat">
+            <span class="label">Speed</span>
+            <strong id="speed-display">0.0 kt</strong>
+          </div>
+          <div class="stat">
+            <span class="label">Heading</span>
+            <strong id="heading-display">0 deg</strong>
+          </div>
+        </div>
+
+        <div class="instructions">
+          <p>Steer with the wheel. Keep a good angle to the wind, hit every marker, and cross the finish fast.</p>
+        </div>
+      </details>
 
       <div class="share-panel hidden" id="share-panel">
         <p class="label">Share Preview</p>
         <pre class="share-preview" id="share-preview"></pre>
-      </div>
-
-      <div class="conditions" id="conditions"></div>
-
-      <div class="stats">
-        <div class="stat">
-          <span class="label">Time</span>
-          <strong id="time-display">00:00.0</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Speed</span>
-          <strong id="speed-display">0.0 kt</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Heading</span>
-          <strong id="heading-display">0 deg</strong>
-        </div>
-      </div>
-
-      <div class="instructions">
-        <p>Steer with the wheel. Keep a good angle to the wind, hit every marker, and cross the finish fast.</p>
-      </div>
-    </section>
-
-    <section class="game-panel">
-      <canvas id="game-canvas" width="900" height="1400" aria-label="Sunrise Sail game area"></canvas>
-
-      <div class="controls">
-        <button id="left-button" class="control-button" aria-label="Turn left">Left</button>
-        <button id="boost-button" class="control-button accent-button" aria-label="Trim sails">Trim</button>
-        <button id="right-button" class="control-button" aria-label="Turn right">Right</button>
       </div>
     </section>
   </main>
@@ -89,6 +127,7 @@
     </div>
   </div>
 
+  <audio id="bg-music" src="Harbor_Lights.mp3" loop preload="auto"></audio>
   <script src="game.js"></script>
 </body>
 </html>

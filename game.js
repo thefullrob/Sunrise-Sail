@@ -3,9 +3,13 @@ const ctx = canvas.getContext("2d");
 
 const conditionsEl = document.getElementById("conditions");
 const dayNameEl = document.getElementById("day-name");
+const dayNameCompactEl = document.getElementById("day-name-compact");
 const timeDisplayEl = document.getElementById("time-display");
+const timeDisplayCompactEl = document.getElementById("time-display-compact");
 const speedDisplayEl = document.getElementById("speed-display");
 const headingDisplayEl = document.getElementById("heading-display");
+const targetDisplayCompactEl = document.getElementById("target-display-compact");
+const challengeCompactEl = document.getElementById("challenge-compact");
 const messageOverlayEl = document.getElementById("message-overlay");
 const messageTitleEl = document.getElementById("message-title");
 const messageBodyEl = document.getElementById("message-body");
@@ -16,6 +20,12 @@ const challengeBodyEl = document.getElementById("challenge-body");
 const shareButtonEl = document.getElementById("share-button");
 const sharePanelEl = document.getElementById("share-panel");
 const sharePreviewEl = document.getElementById("share-preview");
+const hudDrawerEl = document.getElementById("hud-drawer");
+const trimFillEl = document.getElementById("trim-fill");
+const bgMusicEl = document.getElementById("bg-music");
+const musicButtonEl = document.getElementById("music-button");
+const wheelControlEl = document.getElementById("wheel-control");
+const wheelVisualEl = document.getElementById("wheel-visual");
 
 const days = [
   {
@@ -78,6 +88,7 @@ const boat = {
   angle: -Math.PI / 2,
   speed: 0,
   trimBoost: 0,
+  trimEnergy: 1,
 };
 
 let markerHits = markers.map(() => false);
@@ -85,6 +96,7 @@ const controls = {
   left: false,
   right: false,
   trim: false,
+  steer: 0,
 };
 
 const profile = {
@@ -92,18 +104,27 @@ const profile = {
   boat: "",
 };
 
+const audioState = {
+  enabled: true,
+  unlocked: false,
+};
+
+let hudDrawerInitialized = false;
+
 function resetBoat() {
   boat.x = 450;
   boat.y = 1260;
   boat.angle = -Math.PI / 2;
   boat.speed = 0;
   boat.trimBoost = 0;
+  boat.trimEnergy = 1;
   markerHits = markers.map(() => false);
   elapsedMs = 0;
   isFinished = false;
   lastResult = null;
   messageOverlayEl.classList.add("hidden");
   updateShareButton();
+  updateTrimButton();
 }
 
 function getCurrentDay() {
@@ -113,6 +134,7 @@ function getCurrentDay() {
 function renderConditions() {
   const day = getCurrentDay();
   dayNameEl.textContent = day.name;
+  dayNameCompactEl.textContent = day.name;
   conditionsEl.innerHTML = "";
 
   const items = [
@@ -139,7 +161,9 @@ function getBoatName() {
 }
 
 function updateHud() {
-  timeDisplayEl.textContent = formatTime(elapsedMs);
+  const formattedTime = formatTime(elapsedMs);
+  timeDisplayEl.textContent = formattedTime;
+  timeDisplayCompactEl.textContent = formattedTime;
   speedDisplayEl.textContent = `${boat.speed.toFixed(1)} kt`;
   let heading = ((boat.angle * 180) / Math.PI + 90) % 360;
   if (heading < 0) heading += 360;
@@ -164,19 +188,49 @@ function windEfficiency(relativeAngle) {
   return 0.72;
 }
 
+function trimEfficiency(relativeAngle) {
+  const absAngle = Math.abs(relativeAngle);
+  if (absAngle < 0.7) return 0;
+  if (absAngle < 1.0) return 0.35;
+  if (absAngle < 1.95) return 1.0;
+  if (absAngle < 2.45) return 0.55;
+  return 0.2;
+}
+
+function updateTrimButton() {
+  trimFillEl.style.transform = `scaleY(${boat.trimEnergy.toFixed(3)})`;
+  trimFillEl.style.opacity = boat.trimEnergy > 0.02 ? "1" : "0.25";
+}
+
+function updateWheelVisual() {
+  const angle = controls.steer * 55;
+  wheelVisualEl.style.transform = `rotate(${angle.toFixed(1)}deg)`;
+  wheelControlEl.setAttribute("aria-valuenow", controls.steer.toFixed(2));
+}
+
 function updateBoat(dt) {
   if (isFinished) return;
 
-  if (controls.left) boat.angle -= 2.2 * dt;
-  if (controls.right) boat.angle += 2.2 * dt;
-  boat.trimBoost = controls.trim ? 0.18 : 0;
+  const steerInput = Math.max(-1, Math.min(1, controls.steer + (controls.right ? 1 : 0) - (controls.left ? 1 : 0)));
+  boat.angle += steerInput * 2.2 * dt;
 
   const day = getCurrentDay();
   const windAngle = (day.windAngle * Math.PI) / 180 - Math.PI / 2;
   const relativeWind = normalizeAngle(boat.angle - windAngle);
   const efficiency = windEfficiency(relativeWind);
+  const trimWindow = trimEfficiency(relativeWind);
+  const usingTrim = controls.trim && boat.trimEnergy > 0.02;
+  if (usingTrim) {
+    boat.trimEnergy = Math.max(0, boat.trimEnergy - dt / 3.2);
+  } else {
+    boat.trimEnergy = Math.min(1, boat.trimEnergy + dt / 5.6);
+  }
+
+  const trimPower = usingTrim ? trimWindow * (0.32 + boat.trimEnergy * 0.28) : 0;
+  boat.trimBoost += (trimPower - boat.trimBoost) * Math.min(1, dt * 6);
   const targetSpeed = day.windMph * 0.34 * efficiency + boat.trimBoost;
   boat.speed += (targetSpeed - boat.speed) * Math.min(1, dt * 2.5);
+  updateTrimButton();
 
   const wavePenalty = day.waveText === "Rough" ? 0.82 : day.waveText === "Choppy" ? 0.9 : 0.96;
   const currentPushX = Math.sin(Math.PI / 7) * day.current * 8;
@@ -221,17 +275,49 @@ function renderChallengePanel() {
 
     challengeTitleEl.textContent = `${activeChallenge.captain} on ${activeChallenge.boat}`;
     challengeBodyEl.textContent = `Beat ${formatTime(activeChallenge.timeMs)} on ${days[activeChallenge.dayIndex].name}. Right now you are ${deltaText}.`;
+    targetDisplayCompactEl.textContent = formatTime(activeChallenge.timeMs);
+    challengeCompactEl.textContent = `${activeChallenge.captain} on ${activeChallenge.boat}. ${deltaText}.`;
     return;
   }
 
   challengeTitleEl.textContent = "Solo Run";
   challengeBodyEl.textContent = "Set a time, then share it with a friend.";
+  targetDisplayCompactEl.textContent = "Solo";
+  challengeCompactEl.textContent = "Set a time, then share it with a friend.";
 }
 
 function updateShareButton() {
   shareButtonEl.disabled = !lastResult;
   sharePanelEl.classList.toggle("hidden", !lastResult);
   sharePreviewEl.textContent = lastResult ? buildShareText("preview") : "";
+}
+
+function updateMusicButton() {
+  musicButtonEl.textContent = audioState.enabled ? "Music On" : "Music Off";
+}
+
+async function ensureMusicPlayback() {
+  if (!audioState.enabled || audioState.unlocked) return;
+  try {
+    bgMusicEl.volume = 0.45;
+    await bgMusicEl.play();
+    audioState.unlocked = true;
+  } catch (error) {
+    audioState.unlocked = false;
+  }
+}
+
+function toggleMusic() {
+  audioState.enabled = !audioState.enabled;
+  localStorage.setItem("sunrise-sail-music-enabled", audioState.enabled ? "1" : "0");
+  updateMusicButton();
+
+  if (!audioState.enabled) {
+    bgMusicEl.pause();
+    return;
+  }
+
+  ensureMusicPlayback();
 }
 
 function touchesHazard() {
@@ -496,8 +582,10 @@ function saveProfile() {
 function loadProfile() {
   profile.captain = localStorage.getItem("sunrise-sail-captain") || "";
   profile.boat = localStorage.getItem("sunrise-sail-boat") || "";
+  audioState.enabled = localStorage.getItem("sunrise-sail-music-enabled") !== "0";
   captainNameEl.value = profile.captain;
   boatNameEl.value = profile.boat;
+  updateMusicButton();
 }
 
 function buildShareUrl() {
@@ -792,8 +880,10 @@ function loadChallengeFromUrl() {
 
 function bindButton(id, key) {
   const button = document.getElementById(id);
+  if (!button) return;
   const activate = (event) => {
     event.preventDefault();
+    ensureMusicPlayback();
     controls[key] = true;
   };
   const deactivate = (event) => {
@@ -807,6 +897,52 @@ function bindButton(id, key) {
   button.addEventListener("pointercancel", deactivate);
 }
 
+function setWheelSteeringFromEvent(event) {
+  const rect = wheelControlEl.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const deltaX = (event.clientX - centerX) / (rect.width / 2);
+  const raw = Math.max(-1, Math.min(1, deltaX));
+  controls.steer = Math.abs(raw) < 0.12 ? 0 : raw;
+  updateWheelVisual();
+}
+
+function bindWheelControl() {
+  const release = () => {
+    controls.steer = 0;
+    updateWheelVisual();
+  };
+
+  wheelControlEl.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    ensureMusicPlayback();
+    wheelControlEl.setPointerCapture(event.pointerId);
+    setWheelSteeringFromEvent(event);
+  });
+
+  wheelControlEl.addEventListener("pointermove", (event) => {
+    if ((event.buttons & 1) !== 1 && event.pointerType !== "touch") return;
+    event.preventDefault();
+    setWheelSteeringFromEvent(event);
+  });
+
+  wheelControlEl.addEventListener("pointerup", release);
+  wheelControlEl.addEventListener("pointercancel", release);
+  wheelControlEl.addEventListener("pointerleave", (event) => {
+    if (event.pointerType === "mouse") release();
+  });
+}
+
+function syncHudDrawer() {
+  if (window.matchMedia("(min-width: 900px)").matches) {
+    hudDrawerEl.open = true;
+    return;
+  }
+
+  if (!hudDrawerInitialized) {
+    hudDrawerEl.open = false;
+  }
+}
+
 function startNewDay(nextIndex = currentDayIndex) {
   currentDayIndex = nextIndex;
   resetBoat();
@@ -815,6 +951,7 @@ function startNewDay(nextIndex = currentDayIndex) {
 }
 
 document.getElementById("new-day-button").addEventListener("click", () => {
+  ensureMusicPlayback();
   activeChallenge = null;
   const url = new URL(window.location.href);
   url.search = "";
@@ -823,22 +960,24 @@ document.getElementById("new-day-button").addEventListener("click", () => {
 });
 
 document.getElementById("restart-button").addEventListener("click", () => {
+  ensureMusicPlayback();
   startNewDay(currentDayIndex);
 });
 
 captainNameEl.addEventListener("input", saveProfile);
 boatNameEl.addEventListener("input", saveProfile);
+musicButtonEl.addEventListener("click", toggleMusic);
 shareButtonEl.addEventListener("click", () => {
   shareChallenge().catch(() => {
     showMessage("Share This", `${buildShareText()} ${buildShareUrl()}`);
   });
 });
 
-bindButton("left-button", "left");
-bindButton("right-button", "right");
 bindButton("boost-button", "trim");
+bindWheelControl();
 
 window.addEventListener("keydown", (event) => {
+  ensureMusicPlayback();
   if (event.key === "ArrowLeft") controls.left = true;
   if (event.key === "ArrowRight") controls.right = true;
   if (event.key === " ") controls.trim = true;
@@ -852,6 +991,10 @@ window.addEventListener("keyup", (event) => {
 
 loadProfile();
 loadChallengeFromUrl();
+syncHudDrawer();
+hudDrawerInitialized = true;
+window.addEventListener("resize", syncHudDrawer);
 startNewDay(currentDayIndex);
 updateShareButton();
+updateWheelVisual();
 animationId = requestAnimationFrame(loop);
