@@ -1,0 +1,250 @@
+:root {
+  color-scheme: light;
+  --bg-top: #f7c66b;
+  --bg-bottom: #f2efe8;
+  --panel: rgba(255, 248, 238, 0.92);
+  --ink: #17324d;
+  --muted: #5d7182;
+  --sea: #91d8dc;
+  --sea-mid: #67b5c4;
+  --sea-deep: #347f9d;
+  --accent: #ff7a45;
+  --accent-strong: #e8561d;
+  --line: rgba(23, 50, 77, 0.12);
+  --shadow: 0 18px 40px rgba(23, 50, 77, 0.12);
+  --radius: 24px;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.55), transparent 28%),
+    linear-gradient(180deg, var(--bg-top), var(--bg-bottom) 42%);
+  color: var(--ink);
+}
+
+.app {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  gap: 18px;
+}
+
+.hud,
+.game-panel,
+.message-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+.hud {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.eyebrow,
+.label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  line-height: 0.95;
+}
+
+h2 {
+  font-size: 1.35rem;
+}
+
+.day-card,
+.stats,
+.conditions,
+.profile-card,
+.message-actions,
+.controls {
+  display: grid;
+  gap: 12px;
+}
+
+.day-card {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.conditions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-card {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.condition,
+.stat {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+}
+
+.challenge-card,
+.field {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+input {
+  width: 100%;
+  border: 1px solid rgba(23, 50, 77, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: inherit;
+}
+
+input:focus {
+  outline: 2px solid rgba(255, 122, 69, 0.28);
+  border-color: rgba(255, 122, 69, 0.7);
+}
+
+.condition strong,
+.stat strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.05rem;
+}
+
+.instructions {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(74, 149, 168, 0.1);
+  color: var(--ink);
+}
+
+.game-panel {
+  padding: 14px;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.42), transparent 32%),
+    linear-gradient(180deg, #d8f1f0 0%, var(--sea) 16%, var(--sea-mid) 55%, var(--sea-deep) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.controls {
+  margin-top: 14px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+button {
+  border: 0;
+  border-radius: 18px;
+  padding: 14px 16px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.control-button,
+.secondary-button {
+  background: rgba(23, 50, 77, 0.08);
+  color: var(--ink);
+}
+
+.control-button:hover,
+.secondary-button:hover {
+  background: rgba(23, 50, 77, 0.12);
+}
+
+.accent-button,
+.primary-button {
+  background: var(--accent);
+  color: white;
+}
+
+.accent-button:hover,
+.primary-button:hover {
+  background: var(--accent-strong);
+}
+
+.message-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 24, 35, 0.35);
+}
+
+.message-card {
+  width: min(420px, 100%);
+  padding: 24px;
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+
+.message-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hidden {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .app {
+    grid-template-columns: 380px minmax(0, 1fr);
+    align-items: start;
+    padding: 28px;
+  }
+
+  .game-panel {
+    position: sticky;
+    top: 20px;
+  }
+}

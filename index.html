@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Sunrise Sail</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="hud">
+      <div class="brand">
+        <p class="eyebrow">Daily Sailing Sprint</p>
+        <h1>Sunrise Sail</h1>
+      </div>
+
+      <div class="day-card">
+        <div>
+          <p class="label">Today's Conditions</p>
+          <h2 id="day-name">Harbor Dash</h2>
+        </div>
+        <button id="new-day-button" class="secondary-button">New Day</button>
+      </div>
+
+      <div class="profile-card">
+        <div class="field">
+          <label class="label" for="captain-name">Captain</label>
+          <input id="captain-name" type="text" maxlength="24" placeholder="Your name" />
+        </div>
+        <div class="field">
+          <label class="label" for="boat-name">Boat</label>
+          <input id="boat-name" type="text" maxlength="24" placeholder="Boat name" />
+        </div>
+      </div>
+
+      <div class="challenge-card" id="challenge-card">
+        <p class="label">Challenge</p>
+        <h2 id="challenge-title">Solo Run</h2>
+        <p id="challenge-body">Set a time, then share it with a friend.</p>
+      </div>
+
+      <div class="conditions" id="conditions"></div>
+
+      <div class="stats">
+        <div class="stat">
+          <span class="label">Time</span>
+          <strong id="time-display">00:00.0</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Speed</span>
+          <strong id="speed-display">0.0 kt</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Heading</span>
+          <strong id="heading-display">0 deg</strong>
+        </div>
+      </div>
+
+      <div class="instructions">
+        <p>Steer with the wheel. Keep a good angle to the wind, hit every marker, and cross the finish fast.</p>
+      </div>
+    </section>
+
+    <section class="game-panel">
+      <canvas id="game-canvas" width="900" height="1400" aria-label="Sunrise Sail game area"></canvas>
+
+      <div class="controls">
+        <button id="left-button" class="control-button" aria-label="Turn left">Left</button>
+        <button id="boost-button" class="control-button accent-button" aria-label="Trim sails">Trim</button>
+        <button id="right-button" class="control-button" aria-label="Turn right">Right</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="message-overlay" class="message-overlay hidden">
+    <div class="message-card">
+      <p class="label">Result</p>
+      <h2 id="message-title">Finished!</h2>
+      <p id="message-body"></p>
+      <div class="message-actions">
+        <button id="share-button" class="secondary-button">Share Challenge</button>
+        <button id="restart-button" class="primary-button">Sail Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
