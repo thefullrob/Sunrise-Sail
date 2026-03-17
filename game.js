@@ -86,6 +86,9 @@ let activeChallenge = null;
 let trafficSpawnTimer = 0;
 let trafficSeed = 0;
 let skierSpawnTimer = 0;
+let currentWindAngle = 0;
+let windShiftTimer = 15;
+let windShiftFlash = 0;
 
 const boat = {
   x: 450,
@@ -171,6 +174,9 @@ function resetBoat() {
   raceStarted = false;
   lastResult = null;
   releaseSwipeSteering();
+  currentWindAngle = getCurrentDay().windAngle;
+  windShiftTimer = 15;
+  windShiftFlash = 0;
   trafficBoats.length = 0;
   trafficSpawnTimer = 2.4;
   trafficSeed = (trafficSeed + 1) % 1000;
@@ -378,11 +384,13 @@ function updateTrimButton() {
 function updateBoat(dt) {
   if (isFinished || !raceStarted) return;
 
+  updateWindCycle(dt);
+
   const steerInput = Math.max(-1, Math.min(1, controls.steer + (controls.right ? 1 : 0) - (controls.left ? 1 : 0)));
   boat.angle += steerInput * 2.2 * dt;
 
   const day = getCurrentDay();
-  const windAngle = (day.windAngle * Math.PI) / 180 - Math.PI / 2;
+  const windAngle = (currentWindAngle * Math.PI) / 180 - Math.PI / 2;
   const relativeWind = normalizeAngle(boat.angle - windAngle);
   const efficiency = windEfficiency(relativeWind);
   const trimWindow = trimEfficiency(relativeWind);
@@ -395,7 +403,7 @@ function updateBoat(dt) {
 
   const trimPower = usingTrim ? trimWindow * (0.32 + boat.trimEnergy * 0.28) : 0;
   boat.trimBoost += (trimPower - boat.trimBoost) * Math.min(1, dt * 6);
-  const targetSpeed = day.windMph * 0.34 * efficiency + boat.trimBoost;
+  const targetSpeed = Math.max(1.5, day.windMph * 0.34 * efficiency + boat.trimBoost);
   boat.speed += (targetSpeed - boat.speed) * Math.min(1, dt * 2.5);
   updateTrimButton();
 
@@ -1012,7 +1020,7 @@ function drawCourse() {
   ctx.textAlign = "start";
   ctx.textBaseline = "alphabetic";
 
-  drawWindArrow(day.windAngle);
+  drawWindArrow(currentWindAngle);
   ctx.restore();
 }
 
@@ -1024,10 +1032,14 @@ function drawWindArrow(windAngleDegrees) {
   const cardW = 164 * scale;
   const cardH = 68 * scale;
   roundRect(ctx, cardX, cardY, cardW, cardH, 18);
-  ctx.fillStyle = "rgba(248, 251, 255, 0.72)";
+  ctx.fillStyle = windShiftFlash > 0
+    ? `rgba(255, 226, 145, ${0.72 + windShiftFlash * 0.18})`
+    : "rgba(248, 251, 255, 0.72)";
   ctx.fill();
-  ctx.strokeStyle = "rgba(23, 50, 77, 0.1)";
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = windShiftFlash > 0
+    ? `rgba(255, 145, 66, ${0.3 + windShiftFlash * 0.5})`
+    : "rgba(23, 50, 77, 0.1)";
+  ctx.lineWidth = windShiftFlash > 0 ? 2.5 : 1;
   ctx.stroke();
 
   ctx.fillStyle = "rgba(23, 50, 77, 0.82)";
@@ -1042,7 +1054,7 @@ function drawWindArrow(windAngleDegrees) {
   const endX = centerX + Math.cos(angle) * length;
   const endY = centerY + Math.sin(angle) * length;
 
-  ctx.strokeStyle = "rgba(23, 50, 77, 0.8)";
+  ctx.strokeStyle = windShiftFlash > 0 ? "rgba(193, 86, 20, 0.92)" : "rgba(23, 50, 77, 0.8)";
   ctx.lineWidth = 6 * scale;
   ctx.beginPath();
   ctx.moveTo(startX, startY);
@@ -1054,8 +1066,29 @@ function drawWindArrow(windAngleDegrees) {
   ctx.lineTo(endX - 15 * scale * Math.cos(angle - 0.46), endY - 15 * scale * Math.sin(angle - 0.46));
   ctx.lineTo(endX - 15 * scale * Math.cos(angle + 0.46), endY - 15 * scale * Math.sin(angle + 0.46));
   ctx.closePath();
-  ctx.fillStyle = "rgba(23, 50, 77, 0.82)";
+  ctx.fillStyle = windShiftFlash > 0 ? "rgba(193, 86, 20, 0.92)" : "rgba(23, 50, 77, 0.82)";
   ctx.fill();
+}
+
+function updateWindCycle(dt) {
+  windShiftTimer -= dt;
+  windShiftFlash = Math.max(0, windShiftFlash - dt * 0.7);
+
+  if (windShiftTimer > 0) return;
+
+  while (windShiftTimer <= 0) {
+    currentWindAngle = normalizeWindDegrees(currentWindAngle + 90);
+    windShiftTimer += 15;
+  }
+
+  windShiftFlash = 1;
+}
+
+function normalizeWindDegrees(angle) {
+  let normalized = angle % 360;
+  if (normalized > 180) normalized -= 360;
+  if (normalized <= -180) normalized += 360;
+  return normalized;
 }
 
 function drawBoat() {
