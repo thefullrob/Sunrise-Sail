@@ -26,6 +26,7 @@ const startOverlayEl = document.getElementById("start-overlay");
 const startTitleEl = document.getElementById("start-title");
 const startBodyEl = document.getElementById("start-body");
 const startButtonEl = document.getElementById("start-button");
+const SHARE_GRAPHIC_SRC = "share graphic.png";
 
 const days = [
   {
@@ -1650,24 +1651,23 @@ function drawShareBoat(drawCtx, x, y, scale) {
   drawCtx.restore();
 }
 
-async function canvasToFile(cardCanvas) {
-  if (!cardCanvas || !cardCanvas.toBlob) return null;
-  return new Promise((resolve) => {
-    cardCanvas.toBlob((blob) => {
-      if (!blob) {
-        resolve(null);
-        return;
-      }
-      resolve(new File([blob], "sunrise-sail-share.png", { type: "image/png" }));
-    }, "image/png");
-  });
+async function loadShareGraphicFile() {
+  try {
+    const response = await fetch(SHARE_GRAPHIC_SRC, { cache: "no-cache" });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new File([blob], "sunrise-sail-share.png", {
+      type: blob.type || "image/png",
+    });
+  } catch (error) {
+    return null;
+  }
 }
 
 async function shareChallenge() {
   if (!lastResult) return;
 
-  const cardCanvas = drawShareCard();
-  const imageFile = await canvasToFile(cardCanvas);
+  const imageFile = await loadShareGraphicFile();
   const sharePayload = buildSharePayload();
   const shareData = {
     title: sharePayload.title,
