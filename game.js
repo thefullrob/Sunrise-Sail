@@ -23,8 +23,6 @@ const hudDrawerEl = document.getElementById("hud-drawer");
 const trimFillEl = document.getElementById("trim-fill");
 const bgMusicEl = document.getElementById("bg-music");
 const musicButtonEl = document.getElementById("music-button");
-const wheelControlEl = document.getElementById("wheel-control");
-const wheelVisualEl = document.getElementById("wheel-visual");
 const canvasShellEl = document.querySelector(".canvas-shell");
 const startOverlayEl = document.getElementById("start-overlay");
 const startTitleEl = document.getElementById("start-title");
@@ -108,6 +106,11 @@ const controls = {
   steer: 0,
 };
 
+const swipeSteering = {
+  pointerId: null,
+  startX: 0,
+};
+
 const profile = {
   captain: "",
   boat: "",
@@ -164,6 +167,7 @@ function resetBoat() {
   isFinished = false;
   raceStarted = false;
   lastResult = null;
+  releaseSwipeSteering();
   trafficBoats.length = 0;
   trafficSpawnTimer = 2.4;
   trafficSeed = (trafficSeed + 1) % 1000;
@@ -246,12 +250,6 @@ function trimEfficiency(relativeAngle) {
 function updateTrimButton() {
   trimFillEl.style.transform = `scaleY(${boat.trimEnergy.toFixed(3)})`;
   trimFillEl.style.opacity = boat.trimEnergy > 0.02 ? "1" : "0.25";
-}
-
-function updateWheelVisual() {
-  const angle = controls.steer * 55;
-  wheelVisualEl.style.transform = `rotate(${angle.toFixed(1)}deg)`;
-  wheelControlEl.setAttribute("aria-valuenow", controls.steer.toFixed(2));
 }
 
 function updateBoat(dt) {
@@ -409,20 +407,20 @@ function getBoardUiScale() {
 function getControlZone() {
   if (isPhoneLayout()) {
     return {
-      x: 560,
-      y: 1008,
-      width: 276,
-      height: 276,
-      padding: 42,
+      x: 678,
+      y: 1112,
+      width: 126,
+      height: 126,
+      padding: 28,
     };
   }
 
   return {
-    x: 690,
-    y: 1145,
-    width: 150,
-    height: 150,
-    padding: 28,
+    x: 724,
+    y: 1178,
+    width: 92,
+    height: 92,
+    padding: 18,
   };
 }
 
@@ -1495,38 +1493,45 @@ function bindButton(id, key) {
   button.addEventListener("pointercancel", deactivate);
 }
 
-function setWheelSteeringFromEvent(event) {
-  const rect = wheelControlEl.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const deltaX = (event.clientX - centerX) / (rect.width / 2);
+function setSwipeSteering(event) {
+  const rect = canvas.getBoundingClientRect();
+  const dragDistance = rect.width * 0.28;
+  const deltaX = (event.clientX - swipeSteering.startX) / dragDistance;
   const raw = Math.max(-1, Math.min(1, deltaX));
-  controls.steer = Math.abs(raw) < 0.12 ? 0 : raw;
-  updateWheelVisual();
+  controls.steer = Math.abs(raw) < 0.08 ? 0 : raw;
 }
 
-function bindWheelControl() {
-  const release = () => {
-    controls.steer = 0;
-    updateWheelVisual();
-  };
+function releaseSwipeSteering() {
+  swipeSteering.pointerId = null;
+  controls.steer = 0;
+}
 
-  wheelControlEl.addEventListener("pointerdown", (event) => {
+function bindSwipeSteering() {
+  canvas.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (!raceStarted || isFinished) return;
     event.preventDefault();
     ensureMusicPlayback();
-    wheelControlEl.setPointerCapture(event.pointerId);
-    setWheelSteeringFromEvent(event);
+    swipeSteering.pointerId = event.pointerId;
+    swipeSteering.startX = event.clientX;
+    canvas.setPointerCapture(event.pointerId);
+    setSwipeSteering(event);
   });
 
-  wheelControlEl.addEventListener("pointermove", (event) => {
-    if ((event.buttons & 1) !== 1 && event.pointerType !== "touch") return;
+  canvas.addEventListener("pointermove", (event) => {
+    if (swipeSteering.pointerId !== event.pointerId) return;
     event.preventDefault();
-    setWheelSteeringFromEvent(event);
+    setSwipeSteering(event);
   });
 
-  wheelControlEl.addEventListener("pointerup", release);
-  wheelControlEl.addEventListener("pointercancel", release);
-  wheelControlEl.addEventListener("pointerleave", (event) => {
-    if (event.pointerType === "mouse") release();
+  canvas.addEventListener("pointerup", (event) => {
+    if (swipeSteering.pointerId !== event.pointerId) return;
+    releaseSwipeSteering();
+  });
+
+  canvas.addEventListener("pointercancel", (event) => {
+    if (swipeSteering.pointerId !== event.pointerId) return;
+    releaseSwipeSteering();
   });
 }
 
@@ -1583,7 +1588,7 @@ shareButtonEl.addEventListener("click", () => {
 });
 
 bindButton("boost-button", "trim");
-bindWheelControl();
+bindSwipeSteering();
 
 window.addEventListener("keydown", (event) => {
   ensureMusicPlayback();
@@ -1605,5 +1610,4 @@ hudDrawerInitialized = true;
 window.addEventListener("resize", syncHudDrawer);
 startNewDay(currentDayIndex);
 updateShareButton();
-updateWheelVisual();
 animationId = requestAnimationFrame(loop);

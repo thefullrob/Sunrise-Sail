@@ -279,14 +279,13 @@ input:focus {
   position: absolute;
   right: 16px;
   bottom: 16px;
+  display: flex;
   align-items: end;
   justify-content: end;
   z-index: 3;
 }
 
-.controls-overlay .wheel-wrap,
-.controls-overlay .trim-button,
-.controls-overlay .wheel-control {
+.controls-overlay .trim-button {
   pointer-events: auto;
 }
 
@@ -299,6 +298,7 @@ canvas {
   width: 100%;
   height: min(62svh, 560px);
   display: block;
+  touch-action: none;
   border-radius: 20px;
   background:
     radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.42), transparent 32%),
@@ -401,54 +401,12 @@ button:disabled {
   box-shadow: 0 10px 22px rgba(23, 50, 77, 0.16);
 }
 
-.wheel-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-}
-
-.wheel-control {
-  width: 92px;
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  touch-action: none;
-  -webkit-user-select: none;
-  user-select: none;
-  filter: drop-shadow(0 10px 18px rgba(23, 50, 77, 0.18));
-}
-
-.wheel-visual {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: center / contain no-repeat url("captain's wheel.png");
-  transition: transform 80ms linear;
-}
-
-.wheel-spoke {
-  display: none;
-}
-
-.wheel-spoke::before,
-.wheel-spoke::after {
-  display: none;
-}
-
-.wheel-core {
-  display: none;
-}
-
 .trim-button-overlay {
-  position: absolute;
-  left: 50%;
-  bottom: -6px;
-  transform: translateX(-50%);
-  min-height: 42px;
-  min-width: 42px;
-  width: 42px;
-  height: 42px;
+  position: relative;
+  min-height: 52px;
+  min-width: 52px;
+  width: 52px;
+  height: 52px;
   padding: 0;
   border-radius: 50%;
   background: center / contain no-repeat url("trim button.png");
@@ -553,16 +511,11 @@ button:disabled {
     bottom: 12px;
   }
 
-  .wheel-control {
-    width: 86px;
-  }
-
   .trim-button-overlay {
-    width: 38px;
-    height: 38px;
-    min-height: 38px;
-    min-width: 38px;
-    bottom: -4px;
+    width: 50px;
+    height: 50px;
+    min-height: 50px;
+    min-width: 50px;
   }
 }
 
@@ -732,16 +685,11 @@ button:disabled {
     bottom: calc(14px + env(safe-area-inset-bottom));
   }
 
-  .wheel-control {
-    width: 134px;
-  }
-
   .trim-button-overlay {
-    width: 60px;
-    height: 60px;
-    min-width: 60px;
-    min-height: 60px;
-    bottom: -8px;
+    width: 72px;
+    height: 72px;
+    min-width: 72px;
+    min-height: 72px;
   }
 }
 
@@ -788,15 +736,11 @@ button:disabled {
     bottom: 18px;
   }
 
-  .wheel-control {
-    width: 102px;
-  }
-
   .trim-button-overlay {
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-    min-width: 44px;
+    width: 58px;
+    height: 58px;
+    min-height: 58px;
+    min-width: 58px;
   }
 
   canvas {
