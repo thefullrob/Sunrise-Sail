@@ -7,7 +7,6 @@ const dayNameCompactEl = document.getElementById("day-name-compact");
 const timeDisplayEl = document.getElementById("time-display");
 const timeDisplayCompactEl = document.getElementById("time-display-compact");
 const speedDisplayEl = document.getElementById("speed-display");
-const headingDisplayEl = document.getElementById("heading-display");
 const targetDisplayCompactEl = document.getElementById("target-display-compact");
 const challengeCompactEl = document.getElementById("challenge-compact");
 const messageOverlayEl = document.getElementById("message-overlay");
@@ -26,6 +25,11 @@ const bgMusicEl = document.getElementById("bg-music");
 const musicButtonEl = document.getElementById("music-button");
 const wheelControlEl = document.getElementById("wheel-control");
 const wheelVisualEl = document.getElementById("wheel-visual");
+const canvasShellEl = document.querySelector(".canvas-shell");
+const startOverlayEl = document.getElementById("start-overlay");
+const startTitleEl = document.getElementById("start-title");
+const startBodyEl = document.getElementById("start-body");
+const startButtonEl = document.getElementById("start-button");
 
 const days = [
   {
@@ -73,14 +77,25 @@ const markers = [
 ];
 
 const finishLine = { y: 120, x1: 180, x2: 720 };
+const controlZone = {
+  x: 690,
+  y: 1145,
+  width: 150,
+  height: 150,
+  padding: 28,
+};
 
 let currentDayIndex = 0;
 let animationId = 0;
 let lastFrame = 0;
 let elapsedMs = 0;
 let isFinished = false;
+let raceStarted = false;
 let lastResult = null;
 let activeChallenge = null;
+let trafficSpawnTimer = 0;
+let trafficSeed = 0;
+let skierSpawnTimer = 0;
 
 const boat = {
   x: 450,
@@ -111,9 +126,41 @@ const audioState = {
 
 let hudDrawerInitialized = false;
 
+const trafficTypes = [
+  { name: "Tug", color: "#d07b39", hull: "#23415c", speed: [32, 48], size: 0.95, asset: "tug" },
+  { name: "Jet Ski", color: "#f46036", hull: "#17324d", speed: [48, 68], size: 0.7, asset: "jetski" },
+  { name: "Wind Surfer", color: "#ffd166", hull: "#1f5d7a", speed: [36, 56], size: 0.78, asset: "windsurfer" },
+  { name: "Cruise", color: "#f8f4ef", hull: "#567892", speed: [24, 34], size: 1.12, asset: "cruise" },
+  { name: "Skier", color: "#8ecae6", hull: "#264653", speed: [42, 58], size: 0.9, asset: "skiboat" },
+];
+
+const trafficBoats = [];
+const art = loadArtAssets();
+
+function loadArtAssets() {
+  const sources = {
+    sailboat: "Gemini_Generated_Image_kul775kul775kul7.png",
+    tug: "Gemini_Generated_Image_a6ws3oa6ws3oa6ws.png",
+    cruise: "Gemini_Generated_Image_aq9lwzaq9lwzaq9l.png",
+    windsurfer: "Gemini_Generated_Image_51zygp51zygp51zy.png",
+    jetski: "jetski.png",
+    skiboat: "ski boat.png",
+    shoal: "shoal.png",
+    marker: "marker v3.png",
+  };
+
+  return Object.fromEntries(
+    Object.entries(sources).map(([key, src]) => {
+      const image = new Image();
+      image.src = src;
+      return [key, image];
+    })
+  );
+}
+
 function resetBoat() {
-  boat.x = 450;
-  boat.y = 1260;
+  boat.x = 400;
+  boat.y = 1230;
   boat.angle = -Math.PI / 2;
   boat.speed = 0;
   boat.trimBoost = 0;
@@ -121,8 +168,14 @@ function resetBoat() {
   markerHits = markers.map(() => false);
   elapsedMs = 0;
   isFinished = false;
+  raceStarted = false;
   lastResult = null;
+  trafficBoats.length = 0;
+  trafficSpawnTimer = 2.4;
+  trafficSeed = (trafficSeed + 1) % 1000;
+  skierSpawnTimer = 11.5;
   messageOverlayEl.classList.add("hidden");
+  updateStartOverlay();
   updateShareButton();
   updateTrimButton();
 }
@@ -139,9 +192,7 @@ function renderConditions() {
 
   const items = [
     { label: "Wind", value: `${day.windMph} mph` },
-    { label: "Temp", value: `${day.tempF}F` },
     { label: "Waves", value: day.waveText },
-    { label: "Current", value: `${day.current.toFixed(1)} kt` },
   ];
 
   items.forEach((item) => {
@@ -165,10 +216,11 @@ function updateHud() {
   timeDisplayEl.textContent = formattedTime;
   timeDisplayCompactEl.textContent = formattedTime;
   speedDisplayEl.textContent = `${boat.speed.toFixed(1)} kt`;
-  let heading = ((boat.angle * 180) / Math.PI + 90) % 360;
-  if (heading < 0) heading += 360;
-  headingDisplayEl.textContent = `${Math.round(heading)} deg`;
   renderChallengePanel();
+}
+
+function getBaseUrl() {
+  return `${window.location.origin}${window.location.pathname}`;
 }
 
 function formatTime(ms) {
@@ -209,7 +261,7 @@ function updateWheelVisual() {
 }
 
 function updateBoat(dt) {
-  if (isFinished) return;
+  if (isFinished || !raceStarted) return;
 
   const steerInput = Math.max(-1, Math.min(1, controls.steer + (controls.right ? 1 : 0) - (controls.left ? 1 : 0)));
   boat.angle += steerInput * 2.2 * dt;
@@ -241,6 +293,7 @@ function updateBoat(dt) {
 
   boat.x = Math.max(60, Math.min(canvas.width - 60, boat.x));
   boat.y = Math.max(70, Math.min(canvas.height - 70, boat.y));
+  keepBoatOutOfControlZone();
 
   markerHits = markerHits.map((hit, index) => {
     if (hit) return true;
@@ -249,6 +302,14 @@ function updateBoat(dt) {
 
   if (touchesHazard()) {
     boat.speed *= 0.4;
+  }
+
+  updateTraffic(dt);
+  if (touchesTraffic()) {
+    isFinished = true;
+    raceStarted = false;
+    showCrashMessage();
+    return;
   }
 
   if (allMarkersHit() && boat.y <= finishLine.y + 18 && boat.x >= finishLine.x1 && boat.x <= finishLine.x2) {
@@ -262,6 +323,234 @@ function updateBoat(dt) {
     updateShareButton();
     showFinishMessage();
   }
+}
+
+function updateTraffic(dt) {
+  trafficSpawnTimer -= dt;
+  skierSpawnTimer -= dt;
+
+  if (skierSpawnTimer <= 0 && !hasActiveSkier()) {
+    spawnSkierBoat(trafficTypes.find((type) => type.name === "Skier"));
+    skierSpawnTimer = 22;
+  }
+
+  if (trafficSpawnTimer <= 0) {
+    spawnTrafficBoat();
+    trafficSpawnTimer = 5.8 + ((trafficSeed % 3) * 0.9);
+    trafficSeed += 1;
+  }
+
+  prepareTrafficTargets();
+  applyTrafficSeparation();
+
+  for (let index = trafficBoats.length - 1; index >= 0; index -= 1) {
+    const traffic = trafficBoats[index];
+    if (traffic.type.name === "Skier") {
+      traffic.y += traffic.vy * dt;
+      traffic.angle = Math.atan2(traffic.vy, 0);
+      traffic.pathTime += dt;
+      if (traffic.y < 160 || traffic.y > canvas.height - 120) {
+        trafficBoats.splice(index, 1);
+        continue;
+      }
+    } else {
+      traffic.x += traffic.vx * dt;
+      traffic.y += (traffic.targetY - traffic.y) * Math.min(1, dt * 2.6);
+      traffic.angle = Math.atan2(traffic.targetY - traffic.y, traffic.vx);
+    }
+
+    if (traffic.x < -180 || traffic.x > canvas.width + 180 || traffic.y < -180 || traffic.y > canvas.height + 180) {
+      trafficBoats.splice(index, 1);
+    }
+  }
+}
+
+function spawnTrafficBoat() {
+  const type = trafficTypes[trafficSeed % trafficTypes.length];
+  if (type.name === "Skier") {
+    spawnSkierBoat(type);
+    skierSpawnTimer = 22;
+    return;
+  }
+
+  const fromLeft = trafficSeed % 2 === 0;
+  const laneY = 220 + ((trafficSeed * 173) % 860);
+  const speed = type.speed[0] + ((trafficSeed * 11) % Math.round(type.speed[1] - type.speed[0] + 1));
+  const safeLaneY = findSafeTrafficLane(laneY, 28);
+  if (!isTrafficLaneOpen(safeLaneY)) return;
+
+  const vx = fromLeft ? speed : -speed;
+  trafficBoats.push({
+    type,
+    x: fromLeft ? -130 : canvas.width + 130,
+    y: safeLaneY,
+    baseY: safeLaneY,
+    targetY: safeLaneY,
+    baseVx: vx,
+    vx,
+    vy: 0,
+    angle: Math.atan2(0, vx),
+    width: 76 * type.size,
+    height: 30 * type.size,
+    pathTime: 0,
+  });
+}
+
+function touchesTraffic() {
+  return trafficBoats.some((traffic) => distance(boat.x, boat.y, traffic.x, traffic.y) < 44 + traffic.width * 0.28);
+}
+
+function findSafeTrafficLane(preferredY, clearance) {
+  const candidates = [preferredY, 260, 340, 430, 520, 620, 720, 820, 930, 1040];
+  const hazards = getCurrentDay().hazards;
+
+  for (const candidate of candidates) {
+    const safe = hazards.every((hazard) => Math.abs(candidate - hazard.y) > hazard.r + clearance + 40) && isTrafficLaneOpen(candidate);
+    if (safe) return candidate;
+  }
+
+  return preferredY;
+}
+
+function isTrafficLaneOpen(candidateY) {
+  return trafficBoats.every((traffic) => traffic.type.name === "Skier" || Math.abs(traffic.y - candidateY) > 84);
+}
+
+function spawnSkierBoat(type) {
+  const route = findSafeSkierLane();
+  if (!route) return;
+
+  const fromTop = trafficSeed % 2 === 0;
+  const vy = fromTop ? 24 : -24;
+  trafficBoats.push({
+    type,
+    x: route.x,
+    y: fromTop ? 150 : canvas.height - 130,
+    baseY: route.y,
+    vy,
+    angle: Math.atan2(vy, 0),
+    width: 92 * type.size,
+    height: 34 * type.size,
+    pathTime: 0,
+  });
+}
+
+function findSafeSkierLane() {
+  const candidates = [
+    { x: 170, y: 0 },
+    { x: 320, y: 0 },
+    { x: 580, y: 0 },
+  ];
+
+  for (const candidate of candidates) {
+    if (skierLaneIsSafe(candidate.x)) return candidate;
+  }
+
+  return candidates[1];
+}
+
+function skierLaneIsSafe(x) {
+  const hazards = getCurrentDay().hazards;
+  if (markers.some((marker) => Math.abs(marker.x - x) < 72)) return false;
+  if (hazards.some((hazard) => Math.abs(hazard.x - x) < hazard.r + 76)) return false;
+  if (laneIntersectsControlZone(x)) return false;
+  if (trafficBoats.some((traffic) => traffic.type.name === "Skier" || Math.abs(traffic.x - x) < 82)) return false;
+  return true;
+}
+
+function getControlZoneBounds() {
+  return {
+    left: controlZone.x - controlZone.padding,
+    top: controlZone.y - controlZone.padding,
+    right: controlZone.x + controlZone.width + controlZone.padding,
+    bottom: controlZone.y + controlZone.height + controlZone.padding,
+  };
+}
+
+function laneIntersectsControlZone(x) {
+  const zone = getControlZoneBounds();
+  return x > zone.left - 60 && x < zone.right + 60;
+}
+
+function keepBoatOutOfControlZone() {
+  const zone = getControlZoneBounds();
+  const radius = 48;
+  const insideX = boat.x > zone.left - radius && boat.x < zone.right + radius;
+  const insideY = boat.y > zone.top - radius && boat.y < zone.bottom + radius;
+
+  if (!insideX || !insideY) return;
+
+  const pushLeft = Math.abs(boat.x - (zone.left - radius));
+  const pushUp = Math.abs(boat.y - (zone.top - radius));
+
+  if (pushLeft < pushUp) {
+    boat.x = zone.left - radius;
+  } else {
+    boat.y = zone.top - radius;
+  }
+}
+
+function hasActiveSkier() {
+  return trafficBoats.some((traffic) => traffic.type.name === "Skier");
+}
+
+function prepareTrafficTargets() {
+  trafficBoats.forEach((traffic) => {
+    if (traffic.type.name !== "Skier") {
+      traffic.targetY = traffic.baseY;
+      traffic.vx = traffic.baseVx;
+    }
+  });
+}
+
+function applyTrafficSeparation() {
+  for (let i = 0; i < trafficBoats.length; i += 1) {
+    for (let j = i + 1; j < trafficBoats.length; j += 1) {
+      const a = trafficBoats[i];
+      const b = trafficBoats[j];
+      const minDistance = 54 + (a.width + b.width) * 0.22;
+      const gap = distance(a.x, a.y, b.x, b.y);
+      if (gap >= minDistance) continue;
+
+      steerTrafficAway(a, b, minDistance - gap);
+      steerTrafficAway(b, a, minDistance - gap);
+    }
+  }
+}
+
+function steerTrafficAway(subject, other, overlap) {
+  if (subject.type.name === "Skier") return;
+
+  if (other.type.name === "Skier") {
+    subject.vx = subject.baseVx * 0.48;
+    subject.targetY = clampTrafficYToSafe(subject.baseY + (subject.y <= other.y ? -84 : 84), subject);
+    return;
+  }
+
+  const direction = subject.y <= other.y ? -1 : 1;
+  const desired = subject.baseY + direction * Math.max(70, overlap * 1.4);
+  subject.targetY = clampTrafficYToSafe(desired, subject);
+}
+
+function clampTrafficYToSafe(preferredY, subject) {
+  const limits = { min: 190, max: canvas.height - 140 };
+  const hazards = getCurrentDay().hazards;
+  const candidates = [
+    preferredY,
+    preferredY + 70,
+    preferredY - 70,
+    subject.baseY + 90,
+    subject.baseY - 90,
+    subject.baseY,
+  ].map((value) => Math.max(limits.min, Math.min(limits.max, value)));
+
+  for (const candidate of candidates) {
+    const clearHazards = hazards.every((hazard) => Math.abs(candidate - hazard.y) > hazard.r + 82);
+    const clearTraffic = trafficBoats.every((traffic) => traffic === subject || traffic.type.name === "Skier" || Math.abs(traffic.y - candidate) > 56);
+    if (clearHazards && clearTraffic) return candidate;
+  }
+
+  return Math.max(limits.min, Math.min(limits.max, subject.baseY));
 }
 
 function renderChallengePanel() {
@@ -284,6 +573,13 @@ function renderChallengePanel() {
   challengeBodyEl.textContent = "Set a time, then share it with a friend.";
   targetDisplayCompactEl.textContent = "Solo";
   challengeCompactEl.textContent = "Set a time, then share it with a friend.";
+}
+
+function showCrashMessage() {
+  const crashLine = activeChallenge
+    ? `You were chasing ${activeChallenge.captain}'s ${formatTime(activeChallenge.timeMs)} run.`
+    : "Traffic on the course ended your run.";
+  showMessage("Collision!", `${crashLine} Sail again and keep clear of crossing traffic.`);
 }
 
 function updateShareButton() {
@@ -342,6 +638,7 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawWater();
   drawCourse();
+  drawTraffic();
   drawBoat();
 }
 
@@ -375,23 +672,77 @@ function drawCourse() {
 
   ctx.save();
   day.hazards.forEach((hazard) => {
+    if (art.shoal && art.shoal.complete) {
+      const size = hazard.r * 2.35;
+      ctx.drawImage(art.shoal, hazard.x - size / 2, hazard.y - size / 2, size, size);
+      ctx.fillStyle = "rgba(132, 86, 53, 0.82)";
+      ctx.font = "bold 18px Trebuchet MS";
+      ctx.fillText("Shoal", hazard.x - 24, hazard.y + 6);
+      return;
+    }
+
+    ctx.save();
     const shoal = ctx.createRadialGradient(hazard.x, hazard.y, 10, hazard.x, hazard.y, hazard.r);
-    shoal.addColorStop(0, "rgba(185, 177, 163, 0.6)");
-    shoal.addColorStop(1, "rgba(185, 177, 163, 0.18)");
+    shoal.addColorStop(0, "rgba(214, 191, 148, 0.42)");
+    shoal.addColorStop(0.58, "rgba(180, 163, 129, 0.28)");
+    shoal.addColorStop(1, "rgba(185, 177, 163, 0.1)");
     ctx.beginPath();
     ctx.arc(hazard.x, hazard.y, hazard.r, 0, Math.PI * 2);
     ctx.fillStyle = shoal;
     ctx.fill();
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = "rgba(190, 63, 30, 0.7)";
+
+    for (let ring = 0; ring < 3; ring += 1) {
+      ctx.beginPath();
+      ctx.arc(hazard.x, hazard.y, hazard.r - 16 - ring * 12, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(214, 191, 148, ${0.16 - ring * 0.03})`;
+      ctx.lineWidth = 5 - ring;
+      ctx.stroke();
+    }
+
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(173, 87, 52, 0.78)";
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(132, 86, 53, 0.65)";
-    ctx.font = "bold 20px Trebuchet MS";
-    ctx.fillText("Shoal", hazard.x - 28, hazard.y + 6);
+    const rockOffsets = [
+      [-22, -10, 8],
+      [8, -18, 6],
+      [20, 12, 7],
+      [-14, 18, 5],
+    ];
+    rockOffsets.forEach(([dx, dy, radius]) => {
+      ctx.beginPath();
+      ctx.arc(hazard.x + dx, hazard.y + dy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(128, 118, 103, 0.55)";
+      ctx.fill();
+    });
+
+    ctx.fillStyle = "rgba(132, 86, 53, 0.82)";
+    ctx.font = "bold 18px Trebuchet MS";
+    ctx.fillText("Shoal", hazard.x - 24, hazard.y + 6);
+    ctx.restore();
   });
 
   markers.forEach((marker, index) => {
+    if (art.marker && art.marker.complete) {
+      const size = marker.r * 3.2;
+      ctx.drawImage(art.marker, marker.x - size / 2, marker.y - size / 2, size, size);
+      ctx.beginPath();
+      ctx.arc(marker.x, marker.y - marker.r * 0.84, marker.r * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = markerHits[index] ? "rgba(255, 232, 138, 0.96)" : "rgba(255, 250, 240, 0.94)";
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(53, 87, 122, 0.9)";
+      ctx.stroke();
+      ctx.fillStyle = "#35577a";
+      ctx.font = "bold 10px Trebuchet MS";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`${index + 1}`, marker.x, marker.y - marker.r * 0.84 + 0.5);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+      return;
+    }
+
     ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -434,14 +785,31 @@ function drawCourse() {
 
 function drawWindArrow(windAngleDegrees) {
   const angle = (windAngleDegrees * Math.PI) / 180;
-  const startX = 120;
-  const startY = 120;
-  const length = 110;
-  const endX = startX + Math.cos(angle) * length;
-  const endY = startY + Math.sin(angle) * length;
+  const cardX = 34;
+  const cardY = 28;
+  const cardW = 160;
+  const cardH = 68;
+  roundRect(ctx, cardX, cardY, cardW, cardH, 18);
+  ctx.fillStyle = "rgba(248, 251, 255, 0.72)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(23, 50, 77, 0.1)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
 
-  ctx.strokeStyle = "rgba(23, 50, 77, 0.7)";
-  ctx.lineWidth = 7;
+  ctx.fillStyle = "rgba(23, 50, 77, 0.82)";
+  ctx.font = "bold 22px Trebuchet MS";
+  ctx.fillText("Wind", cardX + 16, cardY + 26);
+
+  const centerX = cardX + 112;
+  const centerY = cardY + 42;
+  const length = 38;
+  const startX = centerX - Math.cos(angle) * length * 0.45;
+  const startY = centerY - Math.sin(angle) * length * 0.45;
+  const endX = centerX + Math.cos(angle) * length;
+  const endY = centerY + Math.sin(angle) * length;
+
+  ctx.strokeStyle = "rgba(23, 50, 77, 0.8)";
+  ctx.lineWidth = 6;
   ctx.beginPath();
   ctx.moveTo(startX, startY);
   ctx.lineTo(endX, endY);
@@ -449,18 +817,25 @@ function drawWindArrow(windAngleDegrees) {
 
   ctx.beginPath();
   ctx.moveTo(endX, endY);
-  ctx.lineTo(endX - 18 * Math.cos(angle - 0.45), endY - 18 * Math.sin(angle - 0.45));
-  ctx.lineTo(endX - 18 * Math.cos(angle + 0.45), endY - 18 * Math.sin(angle + 0.45));
+  ctx.lineTo(endX - 15 * Math.cos(angle - 0.46), endY - 15 * Math.sin(angle - 0.46));
+  ctx.lineTo(endX - 15 * Math.cos(angle + 0.46), endY - 15 * Math.sin(angle + 0.46));
   ctx.closePath();
-  ctx.fillStyle = "rgba(23, 50, 77, 0.7)";
+  ctx.fillStyle = "rgba(23, 50, 77, 0.82)";
   ctx.fill();
-
-  ctx.fillStyle = "rgba(23, 50, 77, 0.8)";
-  ctx.font = "bold 24px Trebuchet MS";
-  ctx.fillText("Wind", startX - 10, startY - 22);
 }
 
 function drawBoat() {
+  if (art.sailboat && art.sailboat.complete) {
+    ctx.save();
+    ctx.translate(boat.x, boat.y);
+    ctx.rotate(boat.angle + Math.PI / 2);
+    const width = 118;
+    const height = 118;
+    ctx.drawImage(art.sailboat, -width / 2, -height / 2, width, height);
+    ctx.restore();
+    return;
+  }
+
   ctx.save();
   ctx.translate(boat.x, boat.y);
   ctx.rotate(boat.angle + Math.PI / 2);
@@ -529,12 +904,177 @@ function drawBoat() {
   ctx.restore();
 }
 
+function drawTraffic() {
+  trafficBoats.forEach((traffic) => {
+    ctx.save();
+    ctx.translate(traffic.x, traffic.y);
+    ctx.rotate(traffic.angle);
+    drawTrafficVessel(traffic);
+
+    ctx.restore();
+  });
+}
+
+function drawTrafficVessel(traffic) {
+  const name = traffic.type.name;
+  const artImage = art[traffic.type.asset];
+
+  if (artImage && artImage.complete) {
+    ctx.rotate(Math.PI / 2);
+    const width = 118 * traffic.type.size;
+    const height = 118 * traffic.type.size;
+    ctx.drawImage(artImage, -width / 2, -height / 2, width, height);
+
+    if (name === "Skier") {
+      const skierWave = Math.sin(traffic.theta * 2) * 16;
+      const ropeEndX = -width * 0.86;
+      const ropeEndY = height * 0.08;
+      const skierX = ropeEndX - 38;
+      const skierY = ropeEndY + skierWave;
+
+      ctx.strokeStyle = "#8ecae6";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-width * 0.32, height * 0.02);
+      ctx.quadraticCurveTo(-width * 0.56, height * 0.02, ropeEndX, ropeEndY);
+      ctx.quadraticCurveTo(skierX + 16, skierY - 4, skierX, skierY);
+      ctx.stroke();
+
+      ctx.fillStyle = "#8ecae6";
+      ctx.beginPath();
+      ctx.arc(skierX, skierY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#8ecae6";
+      ctx.beginPath();
+      ctx.moveTo(skierX - 7, skierY + 7);
+      ctx.lineTo(skierX + 7, skierY + 7);
+      ctx.stroke();
+    }
+    return;
+  }
+
+  if (name === "Tug") {
+    ctx.fillStyle = "#274c67";
+    ctx.beginPath();
+    ctx.moveTo(-42, 14);
+    ctx.lineTo(18, 18);
+    ctx.quadraticCurveTo(42, 10, 40, -4);
+    ctx.lineTo(36, -18);
+    ctx.lineTo(-38, -18);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#d07b39";
+    ctx.fillRect(-8, -30, 26, 18);
+    ctx.fillStyle = "#f3efe8";
+    ctx.fillRect(-2, -26, 10, 8);
+    ctx.fillStyle = "#f2c14e";
+    ctx.beginPath();
+    ctx.moveTo(8, -18);
+    ctx.lineTo(8, -38);
+    ctx.lineTo(24, -26);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  if (name === "Cruise") {
+    ctx.fillStyle = "#5f7f95";
+    ctx.beginPath();
+    ctx.moveTo(-54, 16);
+    ctx.lineTo(36, 18);
+    ctx.quadraticCurveTo(56, 4, 56, -6);
+    ctx.lineTo(54, -20);
+    ctx.lineTo(-48, -20);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#f8f4ef";
+    ctx.beginPath();
+    ctx.moveTo(-26, -12);
+    ctx.lineTo(22, -10);
+    ctx.lineTo(16, 8);
+    ctx.lineTo(-32, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#8ecae6";
+    for (let i = 0; i < 4; i += 1) {
+      ctx.fillRect(-18 + i * 10, -8, 6, 4);
+    }
+    return;
+  }
+
+  if (name === "Wind Surfer") {
+    ctx.fillStyle = "#244760";
+    ctx.beginPath();
+    ctx.ellipse(-10, 8, 26, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-6, 10);
+    ctx.lineTo(-6, -28);
+    ctx.stroke();
+    ctx.fillStyle = "#ffd166";
+    ctx.beginPath();
+    ctx.moveTo(-6, -26);
+    ctx.lineTo(-6, -2);
+    ctx.lineTo(22, -10);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  if (name === "Jet Ski") {
+    ctx.fillStyle = "#18364d";
+    ctx.beginPath();
+    ctx.moveTo(-24, 8);
+    ctx.quadraticCurveTo(-4, 14, 20, 6);
+    ctx.lineTo(16, -2);
+    ctx.quadraticCurveTo(-4, -8, -20, -2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#f46036";
+    ctx.beginPath();
+    ctx.moveTo(-4, -6);
+    ctx.lineTo(14, -2);
+    ctx.lineTo(4, 6);
+    ctx.lineTo(-10, 2);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  if (name === "Skier") {
+    ctx.fillStyle = "#2b5876";
+    ctx.beginPath();
+    ctx.moveTo(-34, 10);
+    ctx.lineTo(18, 14);
+    ctx.lineTo(24, 0);
+    ctx.lineTo(16, -10);
+    ctx.lineTo(-30, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#8ecae6";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-34, 2);
+    ctx.lineTo(-60, 14);
+    ctx.stroke();
+    ctx.fillStyle = "#8ecae6";
+    ctx.beginPath();
+    ctx.arc(-66, 18, 4, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+}
+
 function loop(timestamp) {
   if (!lastFrame) lastFrame = timestamp;
   const dt = Math.min(0.032, (timestamp - lastFrame) / 1000);
   lastFrame = timestamp;
 
-  if (!isFinished) elapsedMs += dt * 1000;
+  if (raceStarted && !isFinished) elapsedMs += dt * 1000;
 
   updateBoat(dt);
   updateHud();
@@ -546,6 +1086,22 @@ function showMessage(title, body) {
   messageTitleEl.textContent = title;
   messageBodyEl.textContent = body;
   messageOverlayEl.classList.remove("hidden");
+}
+
+function updateStartOverlay() {
+  if (raceStarted || isFinished) {
+    startOverlayEl.classList.add("hidden");
+    canvasShellEl.classList.remove("awaiting-start");
+    return;
+  }
+
+  const isChallenge = Boolean(activeChallenge);
+  startTitleEl.textContent = isChallenge ? "Beat The Clock" : "Ready To Sail?";
+  startBodyEl.textContent = isChallenge
+    ? `Target time is ${formatTime(activeChallenge.timeMs)}. Tap start when you are ready.`
+    : "Tap start when you are ready. Your clock will begin on the horn.";
+  startOverlayEl.classList.remove("hidden");
+  canvasShellEl.classList.add("awaiting-start");
 }
 
 function showFinishMessage() {
@@ -615,11 +1171,11 @@ function buildShareRows() {
     "",
     `TIME   ${formatTime(lastResult.timeMs)}`,
     `WIND   ${day.windMph} mph`,
-    `WAVES  ${day.waveText}`,
-    `TIDE   ${day.current.toFixed(1)} kt`,
-    "",
-    "Can you beat this line?",
-  ];
+      `WAVES  ${day.waveText}`,
+      `TIDE   ${day.current.toFixed(1)} kt`,
+      "",
+      "Can you beat my time?",
+    ];
 }
 
 function buildShareText(mode = "web") {
@@ -634,7 +1190,7 @@ function buildShareText(mode = "web") {
   if (mode === "clipboard") {
     return `${rows.join("\n")}\n\nRace this run:\n${buildShareUrl()}`;
   }
-  return `${summary}\n\nCan you beat this line?`;
+  return `${summary}\n\nCan you beat my time?\n${buildShareUrl()}`;
 }
 
 function drawShareCard() {
@@ -690,9 +1246,9 @@ function drawShareCard() {
   shareCtx.restore();
 
   shareCtx.fillStyle = "#17324d";
-  shareCtx.font = "700 26px Trebuchet MS";
+  shareCtx.font = "700 24px Trebuchet MS";
   shareCtx.fillText("DAILY SAILING SPRINT", 86, 120);
-  shareCtx.font = "700 70px Trebuchet MS";
+  shareCtx.font = "700 60px Trebuchet MS";
   shareCtx.fillText("Sunrise Sail", 82, 190);
 
   shareCtx.fillStyle = "#5d7182";
@@ -730,7 +1286,11 @@ function drawShareCard() {
   }
   shareCtx.fillStyle = "rgba(23, 50, 77, 0.8)";
   shareCtx.font = "700 30px Trebuchet MS";
-  shareCtx.fillText("Beat this line", 800, 112);
+  shareCtx.fillText("Beat my time", 824, 112);
+
+  shareCtx.fillStyle = "rgba(23, 50, 77, 0.72)";
+  shareCtx.font = "600 22px Trebuchet MS";
+  shareCtx.fillText(getBaseUrl(), 82, 576);
 
   return shareCanvas;
 }
@@ -842,9 +1402,15 @@ async function shareChallenge() {
   }
 
   const fallbackText = buildShareText("clipboard");
+  const subject = encodeURIComponent(buildShareTitle());
+  const body = encodeURIComponent(fallbackText);
+  const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
+  if (!navigator.share && window.location.protocol.startsWith("http")) {
+    window.location.href = mailtoUrl;
+  }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     await navigator.clipboard.writeText(fallbackText);
-    showMessage("Copied!", "Your challenge link and result text were copied to the clipboard.");
+    showMessage("Share Ready", "Your email client was opened if available, and the challenge text was copied to the clipboard.");
     return;
   }
 
@@ -948,6 +1514,7 @@ function startNewDay(nextIndex = currentDayIndex) {
   resetBoat();
   renderConditions();
   updateHud();
+  updateStartOverlay();
 }
 
 document.getElementById("new-day-button").addEventListener("click", () => {
@@ -963,6 +1530,16 @@ document.getElementById("restart-button").addEventListener("click", () => {
   ensureMusicPlayback();
   startNewDay(currentDayIndex);
 });
+
+function activateStartRace(event) {
+  if (event) event.preventDefault();
+  ensureMusicPlayback();
+  raceStarted = true;
+  updateStartOverlay();
+}
+
+startButtonEl.addEventListener("click", activateStartRace);
+startButtonEl.addEventListener("pointerup", activateStartRace);
 
 captainNameEl.addEventListener("input", saveProfile);
 boatNameEl.addEventListener("input", saveProfile);
