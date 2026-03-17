@@ -528,14 +528,14 @@ button:disabled {
     width: 100%;
     padding:
       max(2px, env(safe-area-inset-top))
-      3px
+      0
       calc(6px + env(safe-area-inset-bottom));
-    gap: 4px;
+    gap: 2px;
   }
 
   .game-panel {
     padding: 0;
-    gap: 2px;
+    gap: 0;
     border-radius: 0;
     border: 0;
     background: transparent;
@@ -551,8 +551,8 @@ button:disabled {
   }
 
   .race-bar {
-    gap: 4px;
-    padding: 6px 8px 0;
+    gap: 0;
+    padding: 6px 12px 4px;
   }
 
   .race-copy {
@@ -564,44 +564,8 @@ button:disabled {
   }
 
   .mobile-title {
-    font-size: clamp(2.08rem, 9.4vw, 2.65rem);
-    line-height: 0.9;
-  }
-
-  #day-name-compact {
-    font-size: 1.28rem;
-    line-height: 0.95;
-  }
-
-  .race-copy p:last-child,
-  #challenge-compact {
-    font-size: 0.84rem;
-    line-height: 1.12;
-    max-width: none;
-  }
-
-  #challenge-compact {
-    display: none;
-  }
-
-  .race-stats {
-    gap: 6px;
-  }
-
-  .race-stat {
-    min-height: 60px;
-    padding: 8px 10px;
-    border-radius: 14px;
-  }
-
-  .race-stat .label {
-    font-size: 0.62rem;
-  }
-
-  .race-stat strong {
-    margin-top: 2px;
-    font-size: 1.24rem;
-    line-height: 1;
+    font-size: clamp(2.18rem, 9.8vw, 2.8rem);
+    line-height: 0.88;
   }
 
   .canvas-shell {
@@ -609,11 +573,11 @@ button:disabled {
   }
 
   canvas {
-    width: calc(100vw - 6px);
+    width: 100vw;
     max-width: 100%;
     height: auto;
     min-height: 0;
-    border-radius: 16px;
+    border-radius: 14px;
   }
 
   .start-overlay {
@@ -696,10 +660,10 @@ button:disabled {
   }
 
   .trim-button-overlay {
-    width: 72px;
-    height: 72px;
-    min-width: 72px;
-    min-height: 72px;
+    width: 90px;
+    height: 90px;
+    min-width: 90px;
+    min-height: 90px;
   }
 }
 
