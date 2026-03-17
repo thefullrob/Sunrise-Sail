@@ -398,6 +398,10 @@ function getBoardUiScale() {
   return isPhoneLayout() ? 1.08 : 1;
 }
 
+function getVesselScale() {
+  return getObjectScale() * 1.3;
+}
+
 function getControlZone() {
   if (isPhoneLayout()) {
     return {
@@ -853,7 +857,11 @@ function drawCourse() {
   ctx.beginPath();
   ctx.fillStyle = "rgba(23, 50, 77, 0.75)";
   ctx.font = `bold ${Math.round(28 * uiScale)}px Trebuchet MS`;
-  ctx.fillText("Finish", finishLine.x1 + 214 * uiScale * 0.9, finishLine.y + 28 * uiScale);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText("Finish", (finishLine.x1 + finishLine.x2) / 2, finishLine.y + 18 * uiScale);
+  ctx.textAlign = "start";
+  ctx.textBaseline = "alphabetic";
 
   drawWindArrow(day.windAngle);
   ctx.restore();
@@ -902,7 +910,7 @@ function drawWindArrow(windAngleDegrees) {
 }
 
 function drawBoat() {
-  const scale = getObjectScale();
+  const scale = getVesselScale();
   if (art.sailboat && art.sailboat.complete) {
     ctx.save();
     ctx.translate(boat.x, boat.y);
@@ -996,7 +1004,7 @@ function drawTraffic() {
 function drawTrafficVessel(traffic) {
   const name = traffic.type.name;
   const artImage = art[traffic.type.asset];
-  const scale = getObjectScale();
+  const scale = getVesselScale();
 
   if (artImage && artImage.complete) {
     ctx.rotate(Math.PI / 2);
