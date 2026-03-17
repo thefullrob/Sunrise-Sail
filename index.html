@@ -28,24 +28,33 @@
         </div>
       </div>
 
-      <canvas id="game-canvas" width="900" height="1400" aria-label="Sunrise Sail game area"></canvas>
-
-      <div class="controls">
-        <div class="wheel-wrap">
-          <div id="wheel-control" class="wheel-control" aria-label="Steering wheel" role="slider" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0">
-            <div id="wheel-visual" class="wheel-visual">
-              <span class="wheel-spoke wheel-spoke-a"></span>
-              <span class="wheel-spoke wheel-spoke-b"></span>
-              <span class="wheel-spoke wheel-spoke-c"></span>
-              <span class="wheel-spoke wheel-spoke-d"></span>
-              <span class="wheel-core"></span>
+      <div class="canvas-shell">
+        <canvas id="game-canvas" width="900" height="1400" aria-label="Sunrise Sail game area"></canvas>
+        <div class="controls controls-overlay">
+          <div class="wheel-wrap">
+            <div id="wheel-control" class="wheel-control" aria-label="Steering wheel" role="slider" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0">
+              <div id="wheel-visual" class="wheel-visual">
+                <span class="wheel-spoke wheel-spoke-a"></span>
+                <span class="wheel-spoke wheel-spoke-b"></span>
+                <span class="wheel-spoke wheel-spoke-c"></span>
+                <span class="wheel-spoke wheel-spoke-d"></span>
+                <span class="wheel-core"></span>
+              </div>
             </div>
           </div>
+          <button id="boost-button" class="control-button accent-button trim-button" aria-label="Trim sails">
+            <span class="trim-fill" id="trim-fill"></span>
+            <span class="trim-label">Trim</span>
+          </button>
         </div>
-        <button id="boost-button" class="control-button accent-button trim-button" aria-label="Trim sails">
-          <span class="trim-fill" id="trim-fill"></span>
-          <span class="trim-label">Trim</span>
-        </button>
+        <div id="start-overlay" class="start-overlay">
+          <div class="start-card">
+            <p class="label">Race Control</p>
+            <h2 id="start-title">Ready To Sail?</h2>
+            <p id="start-body">Tap start when you are ready. Your clock will begin on the horn.</p>
+            <button id="start-button" class="primary-button">Start Race</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -96,10 +105,6 @@
           <div class="stat">
             <span class="label">Speed</span>
             <strong id="speed-display">0.0 kt</strong>
-          </div>
-          <div class="stat">
-            <span class="label">Heading</span>
-            <strong id="heading-display">0 deg</strong>
           </div>
         </div>
 
