@@ -32,6 +32,13 @@ body {
   overscroll-behavior-y: contain;
 }
 
+body.expanded-active {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
 .app {
   width: min(1180px, 100%);
   margin: 0 auto;
@@ -104,9 +111,18 @@ h2 {
 }
 
 .race-bar {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 2px 2px 0;
+}
+
+.expand-button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .race-copy {
@@ -287,6 +303,68 @@ input:focus {
 
 .controls-overlay .trim-button {
   pointer-events: auto;
+}
+
+.game-panel.expanded-panel,
+.game-panel:fullscreen,
+.game-panel:-webkit-full-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right))
+    max(10px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.28), transparent 26%),
+    linear-gradient(180deg, rgba(247, 198, 107, 0.96), rgba(242, 239, 232, 0.98) 32%);
+  backdrop-filter: none;
+}
+
+body.immersive-active .game-panel.expanded-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.game-panel.expanded-panel .race-bar,
+.game-panel:fullscreen .race-bar,
+.game-panel:-webkit-full-screen .race-bar {
+  padding: 0 4px;
+  min-height: 44px;
+}
+
+.game-panel.expanded-panel .canvas-shell,
+.game-panel:fullscreen .canvas-shell,
+.game-panel:-webkit-full-screen .canvas-shell {
+  flex: 1;
+  min-height: 0;
+}
+
+.game-panel.expanded-panel canvas,
+.game-panel:fullscreen canvas,
+.game-panel:-webkit-full-screen canvas {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 14px;
+  object-fit: contain;
+}
+
+.game-panel.expanded-panel .trim-button-overlay,
+.game-panel:fullscreen .trim-button-overlay,
+.game-panel:-webkit-full-screen .trim-button-overlay {
+  width: 104px;
+  height: 104px;
+  min-width: 104px;
+  min-height: 104px;
 }
 
 .canvas-shell.awaiting-start .controls-overlay {
@@ -568,6 +646,12 @@ button:disabled {
     line-height: 0.88;
   }
 
+  .expand-button {
+    min-height: 46px;
+    padding: 10px 14px;
+    font-size: 0.96rem;
+  }
+
   .canvas-shell {
     margin-top: 0;
   }
@@ -665,6 +749,32 @@ button:disabled {
     min-width: 90px;
     min-height: 90px;
   }
+
+  .game-panel.expanded-panel,
+  .game-panel:fullscreen,
+  .game-panel:-webkit-full-screen {
+    gap: 4px;
+    padding:
+      max(4px, env(safe-area-inset-top))
+      max(4px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(4px, env(safe-area-inset-left));
+  }
+
+  .game-panel.expanded-panel .mobile-title,
+  .game-panel:fullscreen .mobile-title,
+  .game-panel:-webkit-full-screen .mobile-title {
+    font-size: clamp(2rem, 8.6vw, 2.5rem);
+  }
+
+  .game-panel.expanded-panel .trim-button-overlay,
+  .game-panel:fullscreen .trim-button-overlay,
+  .game-panel:-webkit-full-screen .trim-button-overlay {
+    width: 112px;
+    height: 112px;
+    min-width: 112px;
+    min-height: 112px;
+  }
 }
 
 @media (min-width: 900px) {
@@ -694,6 +804,10 @@ button:disabled {
   }
 
   .race-bar {
+    padding: 0 2px 4px;
+  }
+
+  .race-bar .mobile-title {
     display: none;
   }
 

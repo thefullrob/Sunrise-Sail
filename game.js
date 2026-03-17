@@ -2,6 +2,7 @@ const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 
 const conditionsEl = document.getElementById("conditions");
+const gamePanelEl = document.querySelector(".game-panel");
 const dayNameEl = document.getElementById("day-name");
 const timeDisplayEl = document.getElementById("time-display");
 const speedDisplayEl = document.getElementById("speed-display");
@@ -20,6 +21,7 @@ const trimFillEl = document.getElementById("trim-fill");
 const bgMusicEl = document.getElementById("bg-music");
 const musicButtonEl = document.getElementById("music-button");
 const canvasShellEl = document.querySelector(".canvas-shell");
+const expandButtonEl = document.getElementById("expand-button");
 const startOverlayEl = document.getElementById("start-overlay");
 const startTitleEl = document.getElementById("start-title");
 const startBodyEl = document.getElementById("start-body");
@@ -115,6 +117,11 @@ const profile = {
 const audioState = {
   enabled: true,
   unlocked: false,
+};
+
+const fullscreenState = {
+  mode: "normal",
+  scrollY: 0,
 };
 
 let hudDrawerInitialized = false;
@@ -222,6 +229,128 @@ function formatTime(ms) {
     .padStart(2, "0");
   const seconds = (totalSeconds % 60).toFixed(1).padStart(4, "0");
   return `${minutes}:${seconds}`;
+}
+
+function getFullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function supportsElementFullscreen() {
+  return typeof gamePanelEl.requestFullscreen === "function" || typeof gamePanelEl.webkitRequestFullscreen === "function";
+}
+
+function lockPageScroll() {
+  if (document.body.classList.contains("expanded-active")) return;
+  fullscreenState.scrollY = window.scrollY;
+  document.body.style.top = `-${fullscreenState.scrollY}px`;
+  document.body.classList.add("expanded-active");
+}
+
+function unlockPageScroll() {
+  const scrollY = fullscreenState.scrollY;
+  document.body.classList.remove("expanded-active");
+  document.body.style.top = "";
+  window.scrollTo(0, scrollY);
+}
+
+function updateExpandButton() {
+  const expanded = fullscreenState.mode !== "normal";
+  expandButtonEl.textContent = expanded ? (fullscreenState.mode === "fullscreen" ? "Exit Fullscreen" : "Exit Expanded") : "Expand";
+  expandButtonEl.setAttribute("aria-pressed", expanded ? "true" : "false");
+}
+
+function syncExpandedState() {
+  const expanded = fullscreenState.mode !== "normal";
+  gamePanelEl.classList.toggle("expanded-panel", expanded);
+  document.body.classList.toggle("immersive-active", fullscreenState.mode === "immersive");
+  document.body.classList.toggle("real-fullscreen-active", fullscreenState.mode === "fullscreen");
+
+  if (expanded) {
+    lockPageScroll();
+  } else {
+    unlockPageScroll();
+  }
+
+  updateExpandButton();
+}
+
+async function requestPanelFullscreen() {
+  if (typeof gamePanelEl.requestFullscreen === "function") {
+    return gamePanelEl.requestFullscreen();
+  }
+  if (typeof gamePanelEl.webkitRequestFullscreen === "function") {
+    return gamePanelEl.webkitRequestFullscreen();
+  }
+  throw new Error("Fullscreen not supported");
+}
+
+async function exitPanelFullscreen() {
+  if (typeof document.exitFullscreen === "function") {
+    return document.exitFullscreen();
+  }
+  if (typeof document.webkitExitFullscreen === "function") {
+    return document.webkitExitFullscreen();
+  }
+}
+
+async function enterExpandedMode() {
+  if (supportsElementFullscreen()) {
+    try {
+      await requestPanelFullscreen();
+      fullscreenState.mode = "fullscreen";
+      syncExpandedState();
+      return;
+    } catch (error) {
+      // Fall back to immersive mode when the browser rejects element fullscreen.
+    }
+  }
+
+  fullscreenState.mode = "immersive";
+  syncExpandedState();
+}
+
+async function exitExpandedMode() {
+  if (fullscreenState.mode === "fullscreen" && getFullscreenElement()) {
+    try {
+      await exitPanelFullscreen();
+    } finally {
+      fullscreenState.mode = "normal";
+      syncExpandedState();
+    }
+    return;
+  }
+
+  fullscreenState.mode = "normal";
+  syncExpandedState();
+}
+
+function handleFullscreenChange() {
+  const activeElement = getFullscreenElement();
+  if (activeElement === gamePanelEl) {
+    fullscreenState.mode = "fullscreen";
+    syncExpandedState();
+    return;
+  }
+
+  if (fullscreenState.mode === "fullscreen") {
+    fullscreenState.mode = "normal";
+    syncExpandedState();
+  }
+}
+
+function toggleExpandedMode() {
+  if (fullscreenState.mode === "normal") {
+    enterExpandedMode().catch(() => {
+      fullscreenState.mode = "immersive";
+      syncExpandedState();
+    });
+    return;
+  }
+
+  exitExpandedMode().catch(() => {
+    fullscreenState.mode = "normal";
+    syncExpandedState();
+  });
 }
 
 function windEfficiency(relativeAngle) {
@@ -399,10 +528,30 @@ function getBoardUiScale() {
 }
 
 function getVesselScale() {
-  return getObjectScale() * 1.3;
+  return getObjectScale() * (fullscreenState.mode === "normal" ? 1.3 : 1.42);
 }
 
 function getControlZone() {
+  if (fullscreenState.mode !== "normal") {
+    if (isPhoneLayout()) {
+      return {
+        x: 612,
+        y: 1024,
+        width: 198,
+        height: 198,
+        padding: 34,
+      };
+    }
+
+    return {
+      x: 690,
+      y: 1110,
+      width: 150,
+      height: 150,
+      padding: 22,
+    };
+  }
+
   if (isPhoneLayout()) {
     return {
       x: 646,
@@ -1643,6 +1792,10 @@ startButtonEl.addEventListener("pointerup", activateStartRace);
 captainNameEl.addEventListener("input", saveProfile);
 boatNameEl.addEventListener("input", saveProfile);
 musicButtonEl.addEventListener("click", toggleMusic);
+expandButtonEl.addEventListener("click", (event) => {
+  event.preventDefault();
+  toggleExpandedMode();
+});
 shareButtonEl.addEventListener("click", () => {
   shareChallenge().catch(() => {
     showMessage("Share This", `${buildShareText()} ${buildShareUrl()}`);
@@ -1665,11 +1818,17 @@ window.addEventListener("keyup", (event) => {
   if (event.key === " ") controls.trim = false;
 });
 
+document.addEventListener("fullscreenchange", handleFullscreenChange);
+document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+window.addEventListener("resize", () => {
+  syncHudDrawer();
+});
+
 loadProfile();
 loadChallengeFromUrl();
 syncHudDrawer();
 hudDrawerInitialized = true;
-window.addEventListener("resize", syncHudDrawer);
 startNewDay(currentDayIndex);
 updateShareButton();
+updateExpandButton();
 animationId = requestAnimationFrame(loop);
