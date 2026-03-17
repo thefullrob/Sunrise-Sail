@@ -3,12 +3,8 @@ const ctx = canvas.getContext("2d");
 
 const conditionsEl = document.getElementById("conditions");
 const dayNameEl = document.getElementById("day-name");
-const dayNameCompactEl = document.getElementById("day-name-compact");
 const timeDisplayEl = document.getElementById("time-display");
-const timeDisplayCompactEl = document.getElementById("time-display-compact");
 const speedDisplayEl = document.getElementById("speed-display");
-const targetDisplayCompactEl = document.getElementById("target-display-compact");
-const challengeCompactEl = document.getElementById("challenge-compact");
 const messageOverlayEl = document.getElementById("message-overlay");
 const messageTitleEl = document.getElementById("message-title");
 const messageBodyEl = document.getElementById("message-body");
@@ -185,7 +181,6 @@ function getCurrentDay() {
 function renderConditions() {
   const day = getCurrentDay();
   dayNameEl.textContent = day.name;
-  dayNameCompactEl.textContent = day.name;
   conditionsEl.innerHTML = "";
 
   const items = [
@@ -212,7 +207,6 @@ function getBoatName() {
 function updateHud() {
   const formattedTime = formatTime(elapsedMs);
   timeDisplayEl.textContent = formattedTime;
-  timeDisplayCompactEl.textContent = formattedTime;
   speedDisplayEl.textContent = `${boat.speed.toFixed(1)} kt`;
   renderChallengePanel();
 }
@@ -407,11 +401,11 @@ function getBoardUiScale() {
 function getControlZone() {
   if (isPhoneLayout()) {
     return {
-      x: 678,
-      y: 1112,
-      width: 126,
-      height: 126,
-      padding: 28,
+      x: 646,
+      y: 1082,
+      width: 164,
+      height: 164,
+      padding: 30,
     };
   }
 
@@ -589,15 +583,11 @@ function renderChallengePanel() {
 
     challengeTitleEl.textContent = `${activeChallenge.captain} on ${activeChallenge.boat}`;
     challengeBodyEl.textContent = `Beat ${formatTime(activeChallenge.timeMs)} on ${days[activeChallenge.dayIndex].name}. Right now you are ${deltaText}.`;
-    targetDisplayCompactEl.textContent = formatTime(activeChallenge.timeMs);
-    challengeCompactEl.textContent = `${activeChallenge.captain} on ${activeChallenge.boat}. ${deltaText}.`;
     return;
   }
 
   challengeTitleEl.textContent = "Solo Run";
   challengeBodyEl.textContent = "Set a time, then share it with a friend.";
-  targetDisplayCompactEl.textContent = "Solo";
-  challengeCompactEl.textContent = "Set a time, then share it with a friend.";
 }
 
 function showCrashMessage() {
@@ -665,6 +655,44 @@ function draw() {
   drawCourse();
   drawTraffic();
   drawBoat();
+  drawCanvasRaceHud();
+}
+
+function drawCanvasRaceHud() {
+  const uiScale = getBoardUiScale();
+  const timeText = formatTime(elapsedMs);
+  const targetText = activeChallenge ? formatTime(activeChallenge.timeMs) : "Solo";
+  const pillHeight = 52 * uiScale;
+  const gap = 12 * uiScale;
+  const timeWidth = 154 * uiScale;
+  const targetWidth = 146 * uiScale;
+  const totalWidth = timeWidth + targetWidth + gap;
+  const x = (canvas.width - totalWidth) / 2;
+  const y = 42;
+  const labelFont = `${Math.round(12 * uiScale)}px Trebuchet MS`;
+  const valueFont = `bold ${Math.round(23 * uiScale)}px Trebuchet MS`;
+
+  drawCanvasHudPill(x, y, timeWidth, pillHeight, "Time", timeText, labelFont, valueFont);
+  drawCanvasHudPill(x + timeWidth + gap, y, targetWidth, pillHeight, "Target", targetText, labelFont, valueFont);
+}
+
+function drawCanvasHudPill(x, y, width, height, label, value, labelFont, valueFont) {
+  ctx.save();
+  roundRect(ctx, x, y, width, height, 18);
+  ctx.fillStyle = "rgba(248, 251, 255, 0.9)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(23, 50, 77, 0.12)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(93, 113, 130, 0.95)";
+  ctx.font = labelFont;
+  ctx.fillText(label, x + 14, y + 17);
+
+  ctx.fillStyle = "#17324d";
+  ctx.font = valueFont;
+  ctx.fillText(value, x + 14, y + 40);
+  ctx.restore();
 }
 
 function drawWater() {
