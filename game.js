@@ -768,8 +768,13 @@ function updateMusicButton() {
   musicButtonEl.textContent = audioState.enabled ? "Music On" : "Music Off";
 }
 
+function pauseBackgroundMusic() {
+  bgMusicEl.pause();
+}
+
 async function ensureMusicPlayback() {
-  if (!audioState.enabled || audioState.unlocked) return;
+  if (!audioState.enabled) return;
+  if (audioState.unlocked && !bgMusicEl.paused) return;
   try {
     bgMusicEl.volume = 0.45;
     await bgMusicEl.play();
@@ -785,11 +790,17 @@ function toggleMusic() {
   updateMusicButton();
 
   if (!audioState.enabled) {
-    bgMusicEl.pause();
+    pauseBackgroundMusic();
     return;
   }
 
   ensureMusicPlayback();
+}
+
+function handlePageHiddenState() {
+  if (document.hidden) {
+    pauseBackgroundMusic();
+  }
 }
 
 function touchesHazard() {
@@ -1852,6 +1863,9 @@ window.addEventListener("keyup", (event) => {
 
 document.addEventListener("fullscreenchange", handleFullscreenChange);
 document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+document.addEventListener("visibilitychange", handlePageHiddenState);
+window.addEventListener("pagehide", pauseBackgroundMusic);
+window.addEventListener("beforeunload", pauseBackgroundMusic);
 window.addEventListener("resize", () => {
   syncHudDrawer();
 });
