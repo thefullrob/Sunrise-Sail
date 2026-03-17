@@ -77,13 +77,7 @@ const markers = [
 ];
 
 const finishLine = { y: 120, x1: 180, x2: 720 };
-const controlZone = {
-  x: 690,
-  y: 1145,
-  width: 150,
-  height: 150,
-  padding: 28,
-};
+const phoneLayoutQuery = window.matchMedia("(max-width: 430px)");
 
 let currentDayIndex = 0;
 let animationId = 0;
@@ -159,8 +153,8 @@ function loadArtAssets() {
 }
 
 function resetBoat() {
-  boat.x = 400;
-  boat.y = 1230;
+  boat.x = isPhoneLayout() ? 360 : 400;
+  boat.y = isPhoneLayout() ? 1210 : 1230;
   boat.angle = -Math.PI / 2;
   boat.speed = 0;
   boat.trimBoost = 0;
@@ -400,6 +394,34 @@ function touchesTraffic() {
   return trafficBoats.some((traffic) => distance(boat.x, boat.y, traffic.x, traffic.y) < 44 + traffic.width * 0.28);
 }
 
+function isPhoneLayout() {
+  return phoneLayoutQuery.matches;
+}
+
+function getVisualScale() {
+  return isPhoneLayout() ? 1.18 : 1;
+}
+
+function getControlZone() {
+  if (isPhoneLayout()) {
+    return {
+      x: 618,
+      y: 1072,
+      width: 214,
+      height: 214,
+      padding: 34,
+    };
+  }
+
+  return {
+    x: 690,
+    y: 1145,
+    width: 150,
+    height: 150,
+    padding: 28,
+  };
+}
+
 function findSafeTrafficLane(preferredY, clearance) {
   const candidates = [preferredY, 260, 340, 430, 520, 620, 720, 820, 930, 1040];
   const hazards = getCurrentDay().hazards;
@@ -459,6 +481,7 @@ function skierLaneIsSafe(x) {
 }
 
 function getControlZoneBounds() {
+  const controlZone = getControlZone();
   return {
     left: controlZone.x - controlZone.padding,
     top: controlZone.y - controlZone.padding,
@@ -669,15 +692,16 @@ function drawWater() {
 
 function drawCourse() {
   const day = getCurrentDay();
+  const scale = getVisualScale();
 
   ctx.save();
   day.hazards.forEach((hazard) => {
     if (art.shoal && art.shoal.complete) {
-      const size = hazard.r * 2.35;
+      const size = hazard.r * 2.35 * scale;
       ctx.drawImage(art.shoal, hazard.x - size / 2, hazard.y - size / 2, size, size);
       ctx.fillStyle = "rgba(132, 86, 53, 0.82)";
-      ctx.font = "bold 18px Trebuchet MS";
-      ctx.fillText("Shoal", hazard.x - 24, hazard.y + 6);
+      ctx.font = `bold ${Math.round(18 * scale)}px Trebuchet MS`;
+      ctx.fillText("Shoal", hazard.x - 24 * scale, hazard.y + 6 * scale);
       return;
     }
 
@@ -717,27 +741,27 @@ function drawCourse() {
     });
 
     ctx.fillStyle = "rgba(132, 86, 53, 0.82)";
-    ctx.font = "bold 18px Trebuchet MS";
-    ctx.fillText("Shoal", hazard.x - 24, hazard.y + 6);
+    ctx.font = `bold ${Math.round(18 * scale)}px Trebuchet MS`;
+    ctx.fillText("Shoal", hazard.x - 24 * scale, hazard.y + 6 * scale);
     ctx.restore();
   });
 
   markers.forEach((marker, index) => {
     if (art.marker && art.marker.complete) {
-      const size = marker.r * 3.2;
+      const size = marker.r * 3.2 * scale;
       ctx.drawImage(art.marker, marker.x - size / 2, marker.y - size / 2, size, size);
       ctx.beginPath();
-      ctx.arc(marker.x, marker.y - marker.r * 0.84, marker.r * 0.42, 0, Math.PI * 2);
+      ctx.arc(marker.x, marker.y - marker.r * 0.9 * scale, marker.r * 0.48 * scale, 0, Math.PI * 2);
       ctx.fillStyle = markerHits[index] ? "rgba(255, 232, 138, 0.96)" : "rgba(255, 250, 240, 0.94)";
       ctx.fill();
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = "rgba(53, 87, 122, 0.9)";
       ctx.stroke();
       ctx.fillStyle = "#35577a";
-      ctx.font = "bold 10px Trebuchet MS";
+      ctx.font = `bold ${Math.round(10 * scale)}px Trebuchet MS`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(`${index + 1}`, marker.x, marker.y - marker.r * 0.84 + 0.5);
+      ctx.fillText(`${index + 1}`, marker.x, marker.y - marker.r * 0.9 * scale + 0.5);
       ctx.textAlign = "start";
       ctx.textBaseline = "alphabetic";
       return;
@@ -759,8 +783,8 @@ function drawCourse() {
     ctx.stroke();
 
     ctx.fillStyle = "rgba(23, 50, 77, 0.72)";
-    ctx.font = "bold 18px Trebuchet MS";
-    ctx.fillText(`${index + 1}`, marker.x - 5, marker.y + 6);
+    ctx.font = `bold ${Math.round(18 * scale)}px Trebuchet MS`;
+    ctx.fillText(`${index + 1}`, marker.x - 5 * scale, marker.y + 6 * scale);
   });
 
   const finishWidth = finishLine.x2 - finishLine.x1;
@@ -769,15 +793,15 @@ function drawCourse() {
     ctx.beginPath();
     ctx.moveTo(finishLine.x1 + i * segmentWidth, finishLine.y);
     ctx.lineTo(finishLine.x1 + (i + 1) * segmentWidth, finishLine.y);
-    ctx.lineWidth = 10;
+    ctx.lineWidth = 10 * scale;
     ctx.strokeStyle = i % 2 === 0 ? "#f8fbff" : "#244a65";
     ctx.stroke();
   }
 
   ctx.beginPath();
   ctx.fillStyle = "rgba(23, 50, 77, 0.75)";
-  ctx.font = "bold 28px Trebuchet MS";
-  ctx.fillText("Finish", finishLine.x1 + 220, finishLine.y - 16);
+  ctx.font = `bold ${Math.round(28 * scale)}px Trebuchet MS`;
+  ctx.fillText("Finish", finishLine.x1 + 220 * scale * 0.9, finishLine.y - 16 * scale);
 
   drawWindArrow(day.windAngle);
   ctx.restore();
@@ -785,10 +809,11 @@ function drawCourse() {
 
 function drawWindArrow(windAngleDegrees) {
   const angle = (windAngleDegrees * Math.PI) / 180;
-  const cardX = 34;
-  const cardY = 28;
-  const cardW = 160;
-  const cardH = 68;
+  const scale = getVisualScale();
+  const cardX = 26;
+  const cardY = 20;
+  const cardW = 164 * scale;
+  const cardH = 68 * scale;
   roundRect(ctx, cardX, cardY, cardW, cardH, 18);
   ctx.fillStyle = "rgba(248, 251, 255, 0.72)";
   ctx.fill();
@@ -797,19 +822,19 @@ function drawWindArrow(windAngleDegrees) {
   ctx.stroke();
 
   ctx.fillStyle = "rgba(23, 50, 77, 0.82)";
-  ctx.font = "bold 22px Trebuchet MS";
-  ctx.fillText("Wind", cardX + 16, cardY + 26);
+  ctx.font = `bold ${Math.round(22 * scale)}px Trebuchet MS`;
+  ctx.fillText("Wind", cardX + 16 * scale, cardY + 26 * scale);
 
-  const centerX = cardX + 112;
-  const centerY = cardY + 42;
-  const length = 38;
+  const centerX = cardX + 112 * scale;
+  const centerY = cardY + 42 * scale;
+  const length = 38 * scale;
   const startX = centerX - Math.cos(angle) * length * 0.45;
   const startY = centerY - Math.sin(angle) * length * 0.45;
   const endX = centerX + Math.cos(angle) * length;
   const endY = centerY + Math.sin(angle) * length;
 
   ctx.strokeStyle = "rgba(23, 50, 77, 0.8)";
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 6 * scale;
   ctx.beginPath();
   ctx.moveTo(startX, startY);
   ctx.lineTo(endX, endY);
@@ -817,20 +842,21 @@ function drawWindArrow(windAngleDegrees) {
 
   ctx.beginPath();
   ctx.moveTo(endX, endY);
-  ctx.lineTo(endX - 15 * Math.cos(angle - 0.46), endY - 15 * Math.sin(angle - 0.46));
-  ctx.lineTo(endX - 15 * Math.cos(angle + 0.46), endY - 15 * Math.sin(angle + 0.46));
+  ctx.lineTo(endX - 15 * scale * Math.cos(angle - 0.46), endY - 15 * scale * Math.sin(angle - 0.46));
+  ctx.lineTo(endX - 15 * scale * Math.cos(angle + 0.46), endY - 15 * scale * Math.sin(angle + 0.46));
   ctx.closePath();
   ctx.fillStyle = "rgba(23, 50, 77, 0.82)";
   ctx.fill();
 }
 
 function drawBoat() {
+  const scale = getVisualScale();
   if (art.sailboat && art.sailboat.complete) {
     ctx.save();
     ctx.translate(boat.x, boat.y);
     ctx.rotate(boat.angle + Math.PI / 2);
-    const width = 118;
-    const height = 118;
+    const width = 118 * scale;
+    const height = 118 * scale;
     ctx.drawImage(art.sailboat, -width / 2, -height / 2, width, height);
     ctx.restore();
     return;
@@ -918,11 +944,12 @@ function drawTraffic() {
 function drawTrafficVessel(traffic) {
   const name = traffic.type.name;
   const artImage = art[traffic.type.asset];
+  const scale = getVisualScale();
 
   if (artImage && artImage.complete) {
     ctx.rotate(Math.PI / 2);
-    const width = 118 * traffic.type.size;
-    const height = 118 * traffic.type.size;
+    const width = 118 * traffic.type.size * scale;
+    const height = 118 * traffic.type.size * scale;
     ctx.drawImage(artImage, -width / 2, -height / 2, width, height);
 
     if (name === "Skier") {

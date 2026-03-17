@@ -23,16 +23,22 @@
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.55), transparent 28%),
     linear-gradient(180deg, var(--bg-top), var(--bg-bottom) 42%);
   color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: contain;
 }
 
 .app {
   width: min(1180px, 100%);
   margin: 0 auto;
-  padding: 12px;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    12px
+    calc(12px + env(safe-area-inset-bottom));
   display: grid;
   gap: 14px;
 }
@@ -57,7 +63,7 @@ body {
   order: 1;
   padding: 12px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .hud {
@@ -99,7 +105,7 @@ h2 {
 
 .race-bar {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   padding: 2px 2px 0;
 }
 
@@ -112,6 +118,7 @@ h2 {
   color: var(--muted);
   font-size: 0.98rem;
   line-height: 1.2;
+  max-width: 28ch;
 }
 
 .race-stats {
@@ -125,12 +132,13 @@ h2 {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--line);
+  min-height: 74px;
 }
 
 .race-stat strong {
   display: block;
   margin-top: 3px;
-  font-size: 1rem;
+  font-size: 1.08rem;
 }
 
 .day-card,
@@ -241,6 +249,7 @@ input {
   border-radius: 14px;
   padding: 11px 13px;
   font: inherit;
+  font-size: 16px;
 }
 
 input:focus {
@@ -288,7 +297,7 @@ input:focus {
 
 canvas {
   width: 100%;
-  height: min(58vh, 520px);
+  height: min(62svh, 560px);
   display: block;
   border-radius: 20px;
   background:
@@ -338,6 +347,7 @@ button {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
 
 button:active {
@@ -553,6 +563,179 @@ button:disabled {
     min-height: 38px;
     min-width: 38px;
     bottom: -4px;
+  }
+}
+
+@media (max-width: 430px) {
+  :root {
+    --radius: 22px;
+  }
+
+  .app {
+    width: 100%;
+    padding:
+      max(6px, env(safe-area-inset-top))
+      6px
+      calc(8px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .game-panel {
+    padding: 8px;
+    gap: 6px;
+    border-radius: 22px;
+  }
+
+  .hud {
+    padding: 12px;
+    gap: 10px;
+    border-radius: 22px;
+  }
+
+  .race-bar {
+    gap: 8px;
+    padding: 2px 4px 0;
+  }
+
+  .race-copy {
+    gap: 4px;
+  }
+
+  .mobile-title {
+    font-size: clamp(2.45rem, 11vw, 3.15rem);
+    line-height: 0.9;
+  }
+
+  #day-name-compact {
+    font-size: 1.75rem;
+    line-height: 0.95;
+  }
+
+  .race-copy p:last-child,
+  #challenge-compact {
+    font-size: 1.02rem;
+    line-height: 1.24;
+    max-width: none;
+  }
+
+  .race-stats {
+    gap: 10px;
+  }
+
+  .race-stat {
+    min-height: 84px;
+    padding: 12px 14px;
+    border-radius: 18px;
+  }
+
+  .race-stat .label {
+    font-size: 0.7rem;
+  }
+
+  .race-stat strong {
+    margin-top: 6px;
+    font-size: 1.45rem;
+    line-height: 1;
+  }
+
+  .canvas-shell {
+    margin-top: 2px;
+  }
+
+  canvas {
+    height: clamp(540px, calc(100vw * 1.46), 680px);
+    border-radius: 22px;
+  }
+
+  .start-overlay {
+    padding: 14px;
+  }
+
+  .start-card {
+    width: min(340px, 100%);
+    padding: 18px;
+    gap: 10px;
+    border-radius: 20px;
+  }
+
+  .start-card h2 {
+    font-size: 1.7rem;
+  }
+
+  .start-card p:not(.label) {
+    font-size: 1.08rem;
+    line-height: 1.28;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .hud-drawer > summary {
+    min-height: 52px;
+  }
+
+  .day-card {
+    gap: 10px;
+  }
+
+  .day-card h2 {
+    font-size: 1.6rem;
+  }
+
+  .day-actions {
+    gap: 10px;
+  }
+
+  .day-actions button {
+    padding: 12px 14px;
+    font-size: 1rem;
+  }
+
+  .profile-card,
+  .conditions,
+  .stats {
+    gap: 10px;
+  }
+
+  .field,
+  .challenge-card,
+  .condition,
+  .stat {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .challenge-card h2 {
+    font-size: 1.5rem;
+  }
+
+  .challenge-card p:not(.label),
+  .instructions,
+  .condition strong,
+  .stat strong {
+    font-size: 1.08rem;
+    line-height: 1.28;
+  }
+
+  .instructions {
+    padding: 14px 16px;
+    border-radius: 18px;
+  }
+
+  .controls-overlay {
+    right: calc(10px + env(safe-area-inset-right));
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .wheel-control {
+    width: 118px;
+  }
+
+  .trim-button-overlay {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    min-height: 52px;
+    bottom: -6px;
   }
 }
 
