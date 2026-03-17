@@ -283,7 +283,7 @@ function updateBoat(dt) {
 
   markerHits = markerHits.map((hit, index) => {
     if (hit) return true;
-    return distance(boat.x, boat.y, markers[index].x, markers[index].y) < 44;
+    return distance(boat.x, boat.y, markers[index].x, markers[index].y) < 54;
   });
 
   if (touchesHazard()) {
@@ -661,38 +661,58 @@ function draw() {
 function drawCanvasRaceHud() {
   const uiScale = getBoardUiScale();
   const timeText = formatTime(elapsedMs);
-  const targetText = activeChallenge ? formatTime(activeChallenge.timeMs) : "Solo";
-  const pillHeight = 52 * uiScale;
-  const gap = 12 * uiScale;
+  const remainingTargetMs = activeChallenge ? activeChallenge.timeMs - elapsedMs : null;
+  const targetLate = remainingTargetMs !== null && remainingTargetMs < 0;
+  const targetText = activeChallenge ? formatCountdown(remainingTargetMs) : "Solo";
+  const pillHeight = 46 * uiScale;
+  const gap = 14 * uiScale;
   const timeWidth = 154 * uiScale;
-  const targetWidth = 146 * uiScale;
+  const targetWidth = 158 * uiScale;
   const totalWidth = timeWidth + targetWidth + gap;
   const x = (canvas.width - totalWidth) / 2;
-  const y = 42;
+  const y = 18;
   const labelFont = `${Math.round(12 * uiScale)}px Trebuchet MS`;
-  const valueFont = `bold ${Math.round(23 * uiScale)}px Trebuchet MS`;
+  const valueFont = `bold ${Math.round(21 * uiScale)}px Trebuchet MS`;
 
   drawCanvasHudPill(x, y, timeWidth, pillHeight, "Time", timeText, labelFont, valueFont);
-  drawCanvasHudPill(x + timeWidth + gap, y, targetWidth, pillHeight, "Target", targetText, labelFont, valueFont);
+  drawCanvasHudPill(
+    x + timeWidth + gap,
+    y,
+    targetWidth,
+    pillHeight,
+    "Target",
+    targetText,
+    labelFont,
+    valueFont,
+    targetLate
+      ? { fill: "rgba(204, 62, 48, 0.94)", stroke: "rgba(139, 24, 13, 0.5)", label: "rgba(255, 232, 228, 0.95)", value: "#ffffff" }
+      : undefined
+  );
 }
 
-function drawCanvasHudPill(x, y, width, height, label, value, labelFont, valueFont) {
+function drawCanvasHudPill(x, y, width, height, label, value, labelFont, valueFont, colors = {}) {
   ctx.save();
   roundRect(ctx, x, y, width, height, 18);
-  ctx.fillStyle = "rgba(248, 251, 255, 0.9)";
+  ctx.fillStyle = colors.fill || "rgba(248, 251, 255, 0.9)";
   ctx.fill();
-  ctx.strokeStyle = "rgba(23, 50, 77, 0.12)";
+  ctx.strokeStyle = colors.stroke || "rgba(23, 50, 77, 0.12)";
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  ctx.fillStyle = "rgba(93, 113, 130, 0.95)";
+  ctx.fillStyle = colors.label || "rgba(93, 113, 130, 0.95)";
   ctx.font = labelFont;
-  ctx.fillText(label, x + 14, y + 17);
+  ctx.fillText(label, x + 14, y + 15);
 
-  ctx.fillStyle = "#17324d";
+  ctx.fillStyle = colors.value || "#17324d";
   ctx.font = valueFont;
-  ctx.fillText(value, x + 14, y + 40);
+  ctx.fillText(value, x + 14, y + 36);
   ctx.restore();
+}
+
+function formatCountdown(ms) {
+  const negative = ms < 0;
+  const absoluteMs = Math.abs(ms);
+  return `${negative ? "-" : ""}${formatTime(absoluteMs)}`;
 }
 
 function drawWater() {
@@ -779,20 +799,21 @@ function drawCourse() {
 
   markers.forEach((marker, index) => {
     if (art.marker && art.marker.complete) {
-      const size = marker.r * 3.2 * objectScale;
+      const markerScale = objectScale * 1.5;
+      const size = marker.r * 3.2 * markerScale;
       ctx.drawImage(art.marker, marker.x - size / 2, marker.y - size / 2, size, size);
       ctx.beginPath();
-      ctx.arc(marker.x, marker.y - marker.r * 0.9 * objectScale, marker.r * 0.48 * objectScale, 0, Math.PI * 2);
+      ctx.arc(marker.x, marker.y - marker.r * 0.94 * markerScale, marker.r * 0.58 * markerScale, 0, Math.PI * 2);
       ctx.fillStyle = markerHits[index] ? "rgba(255, 232, 138, 0.96)" : "rgba(255, 250, 240, 0.94)";
       ctx.fill();
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.strokeStyle = "rgba(53, 87, 122, 0.9)";
       ctx.stroke();
       ctx.fillStyle = "#35577a";
-      ctx.font = `bold ${Math.round(10 * uiScale)}px Trebuchet MS`;
+      ctx.font = `bold ${Math.round(14 * uiScale)}px Trebuchet MS`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(`${index + 1}`, marker.x, marker.y - marker.r * 0.9 * objectScale + 0.5);
+      ctx.fillText(`${index + 1}`, marker.x, marker.y - marker.r * 0.94 * markerScale + 0.5);
       ctx.textAlign = "start";
       ctx.textBaseline = "alphabetic";
       return;
@@ -832,7 +853,7 @@ function drawCourse() {
   ctx.beginPath();
   ctx.fillStyle = "rgba(23, 50, 77, 0.75)";
   ctx.font = `bold ${Math.round(28 * uiScale)}px Trebuchet MS`;
-  ctx.fillText("Finish", finishLine.x1 + 220 * uiScale * 0.9, finishLine.y - 16 * uiScale);
+  ctx.fillText("Finish", finishLine.x1 + 214 * uiScale * 0.9, finishLine.y + 28 * uiScale);
 
   drawWindArrow(day.windAngle);
   ctx.restore();
@@ -1172,7 +1193,7 @@ function showFinishMessage() {
       ? `You beat ${activeChallenge.captain}'s time by ${formatTime(margin)}.`
       : `You missed ${activeChallenge.captain}'s time by ${formatTime(margin)}.`;
     showMessage(
-      "Finish!",
+      beatTime ? "You Won!" : "You Lost",
       `${lastResult.captain} on ${lastResult.boat} finished ${getCurrentDay().name} in ${formatTime(lastResult.timeMs)}. ${resultLine}`
     );
     return;
@@ -1598,9 +1619,14 @@ document.getElementById("restart-button").addEventListener("click", () => {
 
 function activateStartRace(event) {
   if (event) event.preventDefault();
+  const currentScrollY = window.scrollY;
   ensureMusicPlayback();
+  startButtonEl.blur();
   raceStarted = true;
   updateStartOverlay();
+  requestAnimationFrame(() => {
+    window.scrollTo(0, currentScrollY);
+  });
 }
 
 startButtonEl.addEventListener("click", activateStartRace);
