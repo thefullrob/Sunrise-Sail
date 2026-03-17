@@ -753,7 +753,7 @@ function showCrashMessage() {
 function updateShareButton() {
   shareButtonEl.disabled = !lastResult;
   sharePanelEl.classList.toggle("hidden", !lastResult);
-  sharePreviewEl.textContent = lastResult ? buildShareText("preview") : "";
+  sharePreviewEl.textContent = lastResult ? buildSharePayload().previewText : "";
 }
 
 function updateMusicButton() {
@@ -1396,37 +1396,46 @@ function buildShareTitle() {
   return `Sunrise Sail - ${days[lastResult.dayIndex].name}`;
 }
 
-function buildShareRows() {
-  if (!lastResult) return [];
+function sanitizeShareValue(value, fallback, maxLength = 48) {
+  const cleaned = String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/[^\w\s.'-]/g, "")
+    .trim();
 
-  const day = days[lastResult.dayIndex];
-  return [
-    "SUNRISE SAIL",
-    `${day.name}`,
-    `${lastResult.captain} aboard ${lastResult.boat}`,
-    "",
-    `TIME   ${formatTime(lastResult.timeMs)}`,
-    `WIND   ${day.windMph} mph`,
-      `WAVES  ${day.waveText}`,
-      `TIDE   ${day.current.toFixed(1)} kt`,
-      "",
-      "Can you beat my time?",
-    ];
+  return (cleaned || fallback).slice(0, maxLength);
 }
 
-function buildShareText(mode = "web") {
-  if (!lastResult) return "Race my Sunrise Sail time.";
+function sanitizeShareTime(value) {
+  const formatted = formatTime(Number(value) || 0);
+  return /^\d{2}:\d{2}\.\d$/.test(formatted) ? formatted : "00:00.0";
+}
 
-  const rows = buildShareRows();
-  if (mode === "preview") {
-    return rows.join("\n");
+function buildSharePayload() {
+  if (!lastResult) {
+    const url = buildShareUrl();
+    return {
+      title: "Sunrise Sail",
+      text: "Can you beat my time?",
+      url,
+      clipboardText: `Can you beat my time? ${url}`,
+      previewText: "Can you beat my time?",
+    };
   }
 
-  const summary = `${lastResult.captain} aboard ${lastResult.boat} sailed ${days[lastResult.dayIndex].name} in ${formatTime(lastResult.timeMs)}.`;
-  if (mode === "clipboard") {
-    return `${rows.join("\n")}\n\nRace this run:\n${buildShareUrl()}`;
-  }
-  return `${summary}\n\nCan you beat my time?\n${buildShareUrl()}`;
+  const captain = sanitizeShareValue(lastResult.captain, "Skipper", 24);
+  const boat = sanitizeShareValue(lastResult.boat, "Morning Star", 24);
+  const course = sanitizeShareValue(days[lastResult.dayIndex]?.name, "Harbor Dash", 28);
+  const time = sanitizeShareTime(lastResult.timeMs);
+  const url = buildShareUrl();
+  const text = `${captain} aboard ${boat} finished ${course} in ${time}. Can you beat my time?`;
+
+  return {
+    title: "Sunrise Sail",
+    text,
+    url,
+    clipboardText: `${text} ${url}`,
+    previewText: text,
+  };
 }
 
 function drawShareCard() {
@@ -1524,10 +1533,6 @@ function drawShareCard() {
   shareCtx.font = "700 30px Trebuchet MS";
   shareCtx.fillText("Beat my time", 824, 112);
 
-  shareCtx.fillStyle = "rgba(23, 50, 77, 0.72)";
-  shareCtx.font = "600 22px Trebuchet MS";
-  shareCtx.fillText(getBaseUrl(), 82, 576);
-
   return shareCanvas;
 }
 
@@ -1619,10 +1624,11 @@ async function shareChallenge() {
 
   const cardCanvas = drawShareCard();
   const imageFile = await canvasToFile(cardCanvas);
+  const sharePayload = buildSharePayload();
   const shareData = {
-    title: buildShareTitle(),
-    text: buildShareText("web"),
-    url: buildShareUrl(),
+    title: sharePayload.title,
+    text: sharePayload.text,
+    url: sharePayload.url,
   };
   const shareWithFile = imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })
     ? { ...shareData, files: [imageFile] }
@@ -1637,20 +1643,13 @@ async function shareChallenge() {
     }
   }
 
-  const fallbackText = buildShareText("clipboard");
-  const subject = encodeURIComponent(buildShareTitle());
-  const body = encodeURIComponent(fallbackText);
-  const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
-  if (!navigator.share && window.location.protocol.startsWith("http")) {
-    window.location.href = mailtoUrl;
-  }
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(fallbackText);
-    showMessage("Share Ready", "Your email client was opened if available, and the challenge text was copied to the clipboard.");
+    await navigator.clipboard.writeText(sharePayload.clipboardText);
+    showMessage("Share Ready", "Challenge copied. Paste it into Messages, email, or anywhere you want to share it.");
     return;
   }
 
-  showMessage("Share This", fallbackText);
+  showMessage("Share This", sharePayload.clipboardText);
 }
 
 function loadChallengeFromUrl() {
@@ -1798,7 +1797,7 @@ expandButtonEl.addEventListener("click", (event) => {
 });
 shareButtonEl.addEventListener("click", () => {
   shareChallenge().catch(() => {
-    showMessage("Share This", `${buildShareText()} ${buildShareUrl()}`);
+    showMessage("Share This", buildSharePayload().clipboardText);
   });
 });
 
