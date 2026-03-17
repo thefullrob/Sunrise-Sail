@@ -21,7 +21,6 @@ const trimFillEl = document.getElementById("trim-fill");
 const bgMusicEl = document.getElementById("bg-music");
 const musicButtonEl = document.getElementById("music-button");
 const canvasShellEl = document.querySelector(".canvas-shell");
-const expandButtonEl = document.getElementById("expand-button");
 const startOverlayEl = document.getElementById("start-overlay");
 const startTitleEl = document.getElementById("start-title");
 const startBodyEl = document.getElementById("start-body");
@@ -129,6 +128,7 @@ const fullscreenState = {
 };
 
 let hudDrawerInitialized = false;
+let startActivationInProgress = false;
 
 const trafficTypes = [
   { name: "Tug", color: "#d07b39", hull: "#23415c", speed: [32, 48], size: 0.95, asset: "tug" },
@@ -260,12 +260,6 @@ function unlockPageScroll() {
   window.scrollTo(0, scrollY);
 }
 
-function updateExpandButton() {
-  const expanded = fullscreenState.mode !== "normal";
-  expandButtonEl.textContent = expanded ? (fullscreenState.mode === "fullscreen" ? "Exit Fullscreen" : "Exit Expanded") : "Expand";
-  expandButtonEl.setAttribute("aria-pressed", expanded ? "true" : "false");
-}
-
 function syncExpandedState() {
   const expanded = fullscreenState.mode !== "normal";
   gamePanelEl.classList.toggle("expanded-panel", expanded);
@@ -277,8 +271,6 @@ function syncExpandedState() {
   } else {
     unlockPageScroll();
   }
-
-  updateExpandButton();
 }
 
 async function requestPanelFullscreen() {
@@ -343,21 +335,6 @@ function handleFullscreenChange() {
     fullscreenState.mode = "normal";
     syncExpandedState();
   }
-}
-
-function toggleExpandedMode() {
-  if (fullscreenState.mode === "normal") {
-    enterExpandedMode().catch(() => {
-      fullscreenState.mode = "immersive";
-      syncExpandedState();
-    });
-    return;
-  }
-
-  exitExpandedMode().catch(() => {
-    fullscreenState.mode = "normal";
-    syncExpandedState();
-  });
 }
 
 function windEfficiency(relativeAngle) {
@@ -756,6 +733,12 @@ function showCrashMessage() {
   const crashLine = activeChallenge
     ? `You were chasing ${activeChallenge.captain}'s ${formatTime(activeChallenge.timeMs)} run.`
     : "Traffic on the course ended your run.";
+  if (fullscreenState.mode !== "normal") {
+    exitExpandedMode().catch(() => {
+      fullscreenState.mode = "normal";
+      syncExpandedState();
+    });
+  }
   showMessage("Collision!", `${crashLine} Sail again and keep clear of crossing traffic.`);
 }
 
@@ -1388,6 +1371,13 @@ function updateStartOverlay() {
 function showFinishMessage() {
   if (!lastResult) return;
 
+  if (fullscreenState.mode !== "normal") {
+    exitExpandedMode().catch(() => {
+      fullscreenState.mode = "normal";
+      syncExpandedState();
+    });
+  }
+
   if (activeChallenge) {
     const beatTime = lastResult.timeMs < activeChallenge.timeMs;
     const margin = Math.abs(lastResult.timeMs - activeChallenge.timeMs);
@@ -1483,102 +1473,104 @@ function buildSharePayload() {
   };
 }
 
-function drawShareCard() {
+async function drawShareCard() {
   if (!lastResult) return null;
 
+  const payload = buildSharePayload();
   const day = days[lastResult.dayIndex];
+  const template = await loadImageAsset(SHARE_GRAPHIC_SRC);
+  if (!template) return null;
+
   const shareCanvas = document.createElement("canvas");
-  shareCanvas.width = 1200;
-  shareCanvas.height = 630;
+  shareCanvas.width = template.naturalWidth || template.width;
+  shareCanvas.height = template.naturalHeight || template.height;
   const shareCtx = shareCanvas.getContext("2d");
+  shareCtx.drawImage(template, 0, 0, shareCanvas.width, shareCanvas.height);
 
-  const bg = shareCtx.createLinearGradient(0, 0, 0, 630);
-  bg.addColorStop(0, "#f7c66b");
-  bg.addColorStop(0.38, "#8fd5db");
-  bg.addColorStop(1, "#347f9d");
-  shareCtx.fillStyle = bg;
-  shareCtx.fillRect(0, 0, 1200, 630);
-
-  const glow = shareCtx.createRadialGradient(920, 70, 20, 920, 70, 220);
-  glow.addColorStop(0, "rgba(255, 245, 197, 0.92)");
-  glow.addColorStop(1, "rgba(255, 245, 197, 0)");
-  shareCtx.fillStyle = glow;
-  shareCtx.beginPath();
-  shareCtx.arc(920, 70, 220, 0, Math.PI * 2);
+  // Course line
+  shareCtx.fillStyle = "rgba(255, 248, 238, 0.92)";
+  roundRect(shareCtx, 290, 58, 430, 54, 18);
   shareCtx.fill();
-
-  shareCtx.fillStyle = "rgba(252, 248, 239, 0.9)";
-  roundRect(shareCtx, 40, 40, 1120, 550, 34);
-  shareCtx.fill();
-
-  const panelGradient = shareCtx.createLinearGradient(430, 70, 430, 560);
-  panelGradient.addColorStop(0, "#dff3f1");
-  panelGradient.addColorStop(1, "#4f99ad");
-  shareCtx.fillStyle = panelGradient;
-  roundRect(shareCtx, 420, 70, 700, 490, 26);
-  shareCtx.fill();
-
-  shareCtx.save();
-  shareCtx.beginPath();
-  roundRect(shareCtx, 420, 70, 700, 490, 26);
-  shareCtx.clip();
-  for (let i = 0; i < 8; i += 1) {
-    const y = 120 + i * 58;
-    shareCtx.beginPath();
-    shareCtx.moveTo(420, y);
-    for (let x = 420; x <= 1120; x += 36) {
-      shareCtx.quadraticCurveTo(x + 18, y + 12, x + 36, y);
-    }
-    shareCtx.strokeStyle = "rgba(255, 255, 255, 0.18)";
-    shareCtx.lineWidth = 4;
-    shareCtx.stroke();
-  }
-  shareCtx.restore();
-
-  shareCtx.fillStyle = "#17324d";
-  shareCtx.font = "700 24px Trebuchet MS";
-  shareCtx.fillText("DAILY SAILING SPRINT", 86, 120);
-  shareCtx.font = "700 60px Trebuchet MS";
-  shareCtx.fillText("Sunrise Sail", 82, 190);
-
-  shareCtx.fillStyle = "#5d7182";
+  shareCtx.fillStyle = "#2a2e34";
   shareCtx.font = "600 28px Trebuchet MS";
-  shareCtx.fillText(day.name, 86, 240);
-  shareCtx.fillText(`${lastResult.captain} aboard ${lastResult.boat}`, 86, 280);
+  shareCtx.textAlign = "center";
+  shareCtx.fillText(`${sanitizeShareValue(day.name, "Harbor Dash", 28).toUpperCase()} COURSE`, 512, 96);
 
-  shareCtx.fillStyle = "#ff7a45";
-  roundRect(shareCtx, 82, 330, 270, 112, 24);
+  // Finish time card value
+  shareCtx.fillStyle = "#ea7b4d";
+  roundRect(shareCtx, 688, 120, 274, 154, 18);
   shareCtx.fill();
+  shareCtx.fillStyle = "#f7a37b";
+  shareCtx.fillRect(930, 136, 14, 122);
+  shareCtx.fillRect(946, 148, 8, 100);
   shareCtx.fillStyle = "#ffffff";
   shareCtx.font = "700 24px Trebuchet MS";
-  shareCtx.fillText("FINISH TIME", 110, 372);
-  shareCtx.font = "700 54px Trebuchet MS";
-  shareCtx.fillText(formatTime(lastResult.timeMs), 108, 426);
+  shareCtx.textAlign = "center";
+  shareCtx.fillText("FINISH TIME", 824, 178);
+  shareCtx.font = "700 64px Trebuchet MS";
+  shareCtx.textAlign = "center";
+  shareCtx.fillText(sanitizeShareTime(lastResult.timeMs), 790, 252);
 
-  shareCtx.fillStyle = "rgba(23, 50, 77, 0.08)";
-  roundRect(shareCtx, 82, 466, 290, 82, 20);
+  // Boat name
+  shareCtx.fillStyle = "rgba(255, 248, 238, 0.94)";
+  roundRect(shareCtx, 640, 266, 280, 78, 18);
   shareCtx.fill();
   shareCtx.fillStyle = "#17324d";
-  shareCtx.font = "700 22px Trebuchet MS";
-  shareCtx.fillText(`Wind ${day.windMph} mph`, 110, 500);
-  shareCtx.fillText(`Waves ${day.waveText}`, 110, 530);
-
-  drawShareBoat(shareCtx, 605, 365, 1.5);
-
-  shareCtx.strokeStyle = "rgba(248, 251, 255, 0.95)";
-  shareCtx.lineWidth = 10;
-  for (let i = 0; i < 8; i += 1) {
-    shareCtx.beginPath();
-    shareCtx.moveTo(760 + i * 34, 140);
-    shareCtx.lineTo(786 + i * 34, 140);
-    shareCtx.strokeStyle = i % 2 === 0 ? "#f8fbff" : "#244a65";
-    shareCtx.stroke();
-  }
-  shareCtx.fillStyle = "rgba(23, 50, 77, 0.8)";
   shareCtx.font = "700 30px Trebuchet MS";
-  shareCtx.fillText("Beat my time", 824, 112);
+  shareCtx.fillText(sanitizeShareValue(lastResult.boat, "Morning Star", 22), 780, 318);
+
+  // Conditions box
+  shareCtx.fillStyle = "rgba(255, 248, 238, 0.92)";
+  roundRect(shareCtx, 64, 545, 306, 126, 22);
+  shareCtx.fill();
+  shareCtx.fillStyle = "#1e2a36";
+  shareCtx.textAlign = "left";
+  shareCtx.font = "700 28px Trebuchet MS";
+  shareCtx.fillText("CONDITIONS", 95, 597);
+  shareCtx.font = "600 28px Trebuchet MS";
+  shareCtx.fillText(`Wind ${day.windMph} mph`, 95, 645);
+  shareCtx.fillText(`Waves ${day.waveText}`, 95, 688);
+
+  // Bottom challenge copy
+  shareCtx.fillStyle = "rgba(255, 248, 238, 0.96)";
+  roundRect(shareCtx, 70, 790, 884, 132, 22);
+  shareCtx.fill();
+  shareCtx.fillStyle = "#1a2430";
+  shareCtx.textAlign = "center";
+  shareCtx.font = "600 30px Trebuchet MS";
+  drawCenteredWrappedText(shareCtx, payload.text, shareCanvas.width / 2, 842, 820, 38);
 
   return shareCanvas;
+}
+
+function loadImageAsset(src) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = `${src}?v=20260317e`;
+  });
+}
+
+function drawCenteredWrappedText(drawCtx, text, centerX, startY, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  const lines = [];
+  let current = "";
+
+  words.forEach((word) => {
+    const candidate = current ? `${current} ${word}` : word;
+    if (drawCtx.measureText(candidate).width <= maxWidth || !current) {
+      current = candidate;
+      return;
+    }
+    lines.push(current);
+    current = word;
+  });
+
+  if (current) lines.push(current);
+  lines.forEach((line, index) => {
+    drawCtx.fillText(line, centerX, startY + index * lineHeight);
+  });
 }
 
 function roundRect(drawCtx, x, y, width, height, radius) {
@@ -1651,23 +1643,11 @@ function drawShareBoat(drawCtx, x, y, scale) {
   drawCtx.restore();
 }
 
-async function loadShareGraphicFile() {
-  try {
-    const response = await fetch(SHARE_GRAPHIC_SRC, { cache: "no-cache" });
-    if (!response.ok) return null;
-    const blob = await response.blob();
-    return new File([blob], "sunrise-sail-share.png", {
-      type: blob.type || "image/png",
-    });
-  } catch (error) {
-    return null;
-  }
-}
-
 async function shareChallenge() {
   if (!lastResult) return;
 
-  const imageFile = await loadShareGraphicFile();
+  const cardCanvas = await drawShareCard();
+  const imageFile = await canvasToFile(cardCanvas);
   const sharePayload = buildSharePayload();
   const shareData = {
     title: sharePayload.title,
@@ -1756,6 +1736,16 @@ function releaseSwipeSteering() {
 }
 
 function bindSwipeSteering() {
+  const suppressDefaultSurfaceBehavior = (event) => {
+    event.preventDefault();
+  };
+
+  canvas.addEventListener("contextmenu", suppressDefaultSurfaceBehavior);
+  canvas.addEventListener("selectstart", suppressDefaultSurfaceBehavior);
+  canvas.addEventListener("dragstart", suppressDefaultSurfaceBehavior);
+  canvasShellEl.addEventListener("contextmenu", suppressDefaultSurfaceBehavior);
+  canvasShellEl.addEventListener("selectstart", suppressDefaultSurfaceBehavior);
+
   canvas.addEventListener("pointerdown", (event) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     if (!raceStarted || isFinished) return;
@@ -1805,6 +1795,12 @@ function startNewDay(nextIndex = currentDayIndex) {
 
 document.getElementById("new-day-button").addEventListener("click", () => {
   ensureMusicPlayback();
+  if (fullscreenState.mode !== "normal") {
+    exitExpandedMode().catch(() => {
+      fullscreenState.mode = "normal";
+      syncExpandedState();
+    });
+  }
   activeChallenge = null;
   const url = new URL(window.location.href);
   url.search = "";
@@ -1814,31 +1810,49 @@ document.getElementById("new-day-button").addEventListener("click", () => {
 
 document.getElementById("restart-button").addEventListener("click", () => {
   ensureMusicPlayback();
+  if (fullscreenState.mode !== "normal") {
+    exitExpandedMode().catch(() => {
+      fullscreenState.mode = "normal";
+      syncExpandedState();
+    });
+  }
   startNewDay(currentDayIndex);
 });
 
 function activateStartRace(event) {
   if (event) event.preventDefault();
+  if (startActivationInProgress || raceStarted || isFinished) return;
+  startActivationInProgress = true;
   const currentScrollY = window.scrollY;
   ensureMusicPlayback();
   startButtonEl.blur();
   raceStarted = true;
-  updateStartOverlay();
-  requestAnimationFrame(() => {
-    window.scrollTo(0, currentScrollY);
-  });
+  const finalizeStart = () => {
+    startActivationInProgress = false;
+    updateStartOverlay();
+    requestAnimationFrame(() => {
+      window.scrollTo(0, currentScrollY);
+    });
+  };
+
+  if (fullscreenState.mode === "normal") {
+    enterExpandedMode()
+      .catch(() => {
+        fullscreenState.mode = "immersive";
+        syncExpandedState();
+      })
+      .finally(finalizeStart);
+    return;
+  }
+
+  finalizeStart();
 }
 
 startButtonEl.addEventListener("click", activateStartRace);
-startButtonEl.addEventListener("pointerup", activateStartRace);
 
 captainNameEl.addEventListener("input", saveProfile);
 boatNameEl.addEventListener("input", saveProfile);
 musicButtonEl.addEventListener("click", toggleMusic);
-expandButtonEl.addEventListener("click", (event) => {
-  event.preventDefault();
-  toggleExpandedMode();
-});
 shareButtonEl.addEventListener("click", () => {
   shareChallenge().catch(() => {
     showMessage("Share This", buildSharePayload().clipboardText);
@@ -1876,5 +1890,4 @@ syncHudDrawer();
 hudDrawerInitialized = true;
 startNewDay(currentDayIndex);
 updateShareButton();
-updateExpandButton();
 animationId = requestAnimationFrame(loop);

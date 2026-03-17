@@ -71,6 +71,10 @@ body.expanded-active {
   padding: 12px;
   display: grid;
   gap: 8px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .hud {
@@ -113,16 +117,9 @@ h2 {
 .race-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   padding: 2px 2px 0;
-}
-
-.expand-button {
-  min-height: 44px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  white-space: nowrap;
 }
 
 .race-copy {
@@ -289,6 +286,10 @@ input:focus {
 
 .canvas-shell {
   position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .controls-overlay {
@@ -299,6 +300,10 @@ input:focus {
   align-items: end;
   justify-content: end;
   z-index: 3;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .controls-overlay .trim-button {
@@ -378,6 +383,10 @@ canvas {
   aspect-ratio: 9 / 14;
   display: block;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   border-radius: 20px;
   background:
     radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.42), transparent 32%),
@@ -644,12 +653,6 @@ button:disabled {
   .mobile-title {
     font-size: clamp(2.18rem, 9.8vw, 2.8rem);
     line-height: 0.88;
-  }
-
-  .expand-button {
-    min-height: 46px;
-    padding: 10px 14px;
-    font-size: 0.96rem;
   }
 
   .canvas-shell {
