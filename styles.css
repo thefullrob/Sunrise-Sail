@@ -32,9 +32,9 @@ body {
 .app {
   width: min(1180px, 100%);
   margin: 0 auto;
-  padding: 20px;
+  padding: 12px;
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .hud,
@@ -48,16 +48,16 @@ body {
 }
 
 .hud {
-  padding: 20px;
+  padding: 16px;
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .game-panel {
   order: 1;
-  padding: 14px;
+  padding: 12px;
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .hud {
@@ -93,42 +93,44 @@ h2 {
 }
 
 .mobile-title {
-  font-size: clamp(1.7rem, 7vw, 2.6rem);
-  margin-top: 2px;
+  font-size: clamp(1.45rem, 6.4vw, 2.2rem);
+  margin-top: 0;
 }
 
 .race-bar {
   display: grid;
-  gap: 12px;
-  padding: 6px 4px 2px;
+  gap: 8px;
+  padding: 2px 2px 0;
 }
 
 .race-copy {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .race-copy p:last-child {
   color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.2;
 }
 
 .race-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .race-stat {
-  padding: 12px 14px;
-  border-radius: 18px;
+  padding: 10px 12px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--line);
 }
 
 .race-stat strong {
   display: block;
-  margin-top: 4px;
-  font-size: 1.12rem;
+  margin-top: 3px;
+  font-size: 1rem;
 }
 
 .day-card,
@@ -138,7 +140,7 @@ h2 {
 .message-actions,
 .controls {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .day-card {
@@ -149,12 +151,12 @@ h2 {
 .day-actions {
   display: grid;
   grid-auto-flow: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .hud-drawer {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .hud-drawer > summary {
@@ -190,16 +192,16 @@ h2 {
 
 .condition,
 .stat {
-  padding: 14px;
-  border-radius: 18px;
+  padding: 12px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--line);
 }
 
 .challenge-card,
 .field {
-  padding: 14px;
-  border-radius: 18px;
+  padding: 12px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--line);
 }
@@ -207,8 +209,8 @@ h2 {
 .share-panel {
   display: grid;
   gap: 10px;
-  padding: 14px;
-  border-radius: 18px;
+  padding: 12px;
+  border-radius: 16px;
   background: linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(247, 240, 226, 0.9));
   border: 1px solid var(--line);
 }
@@ -237,7 +239,7 @@ input {
   background: rgba(255, 255, 255, 0.92);
   color: var(--ink);
   border-radius: 14px;
-  padding: 12px 14px;
+  padding: 11px 13px;
   font: inherit;
 }
 
@@ -254,26 +256,69 @@ input:focus {
 }
 
 .instructions {
-  padding: 14px 16px;
-  border-radius: 18px;
+  padding: 12px 14px;
+  border-radius: 16px;
   background: rgba(74, 149, 168, 0.1);
   color: var(--ink);
 }
 
+.canvas-shell {
+  position: relative;
+}
+
+.controls-overlay {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  grid-template-columns: 104px 54px;
+  align-items: end;
+  justify-content: end;
+  gap: 8px;
+  z-index: 2;
+}
+
+.controls-overlay .wheel-wrap,
+.controls-overlay .trim-button,
+.controls-overlay .wheel-control {
+  pointer-events: auto;
+}
+
 canvas {
   width: 100%;
-  height: auto;
+  height: min(58vh, 520px);
   display: block;
   border-radius: 20px;
   background:
     radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.42), transparent 32%),
     linear-gradient(180deg, #d8f1f0 0%, var(--sea) 16%, var(--sea-mid) 55%, var(--sea-deep) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  object-fit: cover;
+}
+
+.start-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(10, 24, 35, 0.16);
+}
+
+.start-card {
+  width: min(360px, 100%);
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 248, 238, 0.94);
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  box-shadow: 0 18px 38px rgba(23, 50, 77, 0.18);
+  text-align: center;
 }
 
 .controls {
-  grid-template-columns: minmax(0, 1fr) 132px;
-  align-items: center;
+  display: grid;
 }
 
 button {
@@ -281,7 +326,7 @@ button {
   overflow: hidden;
   border: 0;
   border-radius: 18px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -333,9 +378,13 @@ button:disabled {
 
 .trim-button {
   isolation: isolate;
-  min-height: 132px;
-  font-size: 1.15rem;
+  min-height: 54px;
+  min-width: 54px;
+  padding: 8px;
+  border-radius: 18px;
+  font-size: 0.76rem;
   touch-action: none;
+  box-shadow: 0 10px 22px rgba(23, 50, 77, 0.16);
 }
 
 .trim-fill {
@@ -360,7 +409,7 @@ button:disabled {
 }
 
 .wheel-control {
-  width: min(100%, 220px);
+  width: 104px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -374,7 +423,7 @@ button:disabled {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 12px solid #8b5b33;
+  border: 9px solid #8b5b33;
   background:
     radial-gradient(circle at 50% 48%, rgba(255, 248, 238, 0.8), rgba(246, 224, 194, 0.34) 58%, transparent 60%),
     radial-gradient(circle at 50% 50%, #efd7b4 0%, #c68d55 65%, #8b5b33 100%);
@@ -388,9 +437,9 @@ button:disabled {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 10px;
+  width: 8px;
   height: 40%;
-  margin-left: -5px;
+  margin-left: -4px;
   margin-top: -40%;
   transform-origin: center bottom;
   background: linear-gradient(180deg, #7d4d2a, #b47a45);
@@ -402,9 +451,9 @@ button:disabled {
   content: "";
   position: absolute;
   left: 50%;
-  width: 18px;
-  height: 18px;
-  margin-left: -9px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
   border-radius: 50%;
   background: #7d4d2a;
 }
@@ -461,21 +510,93 @@ button:disabled {
   display: none;
 }
 
+@media (max-width: 899px) {
+  .label,
+  .eyebrow {
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
+  }
+
+  h2 {
+    font-size: 1.08rem;
+  }
+
+  .day-card {
+    gap: 8px;
+  }
+
+  .day-card,
+  .profile-card,
+  .conditions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .day-actions {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stat {
+    min-height: 82px;
+  }
+
+  .condition strong,
+  .stat strong {
+    font-size: 0.9rem;
+  }
+
+  .instructions {
+    font-size: 0.98rem;
+    line-height: 1.35;
+  }
+
+  .start-card {
+    padding: 16px;
+    gap: 8px;
+  }
+
+  .controls-overlay {
+    right: 12px;
+    bottom: 12px;
+    grid-template-columns: 96px 50px;
+    gap: 8px;
+  }
+
+  .wheel-control {
+    width: 96px;
+  }
+
+  .trim-button {
+    min-height: 50px;
+    min-width: 50px;
+    font-size: 0.72rem;
+  }
+}
+
 @media (min-width: 900px) {
   .app {
     grid-template-columns: 380px minmax(0, 1fr);
     align-items: start;
     padding: 28px;
+    gap: 18px;
   }
 
   .hud {
     order: 1;
+    padding: 20px;
+    gap: 16px;
   }
 
   .game-panel {
     order: 2;
     position: sticky;
     top: 20px;
+    padding: 14px;
+    gap: 14px;
   }
 
   .desktop-brand {
@@ -490,11 +611,28 @@ button:disabled {
     display: none;
   }
 
-  .controls {
-    grid-template-columns: minmax(0, 1fr) 160px;
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .controls-overlay {
+    right: 18px;
+    bottom: 18px;
+    grid-template-columns: 110px 58px;
+    gap: 10px;
+  }
+
+  .wheel-control {
+    width: 110px;
   }
 
   .trim-button {
-    min-height: 160px;
+    min-height: 58px;
+    min-width: 58px;
+  }
+
+  canvas {
+    height: auto;
+    object-fit: contain;
   }
 }
