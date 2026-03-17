@@ -153,7 +153,7 @@ function loadArtAssets() {
 }
 
 function resetBoat() {
-  boat.x = isPhoneLayout() ? 360 : 400;
+  boat.x = isPhoneLayout() ? 330 : 400;
   boat.y = isPhoneLayout() ? 1210 : 1230;
   boat.angle = -Math.PI / 2;
   boat.speed = 0;
@@ -398,18 +398,22 @@ function isPhoneLayout() {
   return phoneLayoutQuery.matches;
 }
 
-function getVisualScale() {
-  return isPhoneLayout() ? 1.18 : 1;
+function getObjectScale() {
+  return isPhoneLayout() ? 1.34 : 1;
+}
+
+function getBoardUiScale() {
+  return isPhoneLayout() ? 1.08 : 1;
 }
 
 function getControlZone() {
   if (isPhoneLayout()) {
     return {
-      x: 618,
-      y: 1072,
-      width: 214,
-      height: 214,
-      padding: 34,
+      x: 560,
+      y: 1008,
+      width: 276,
+      height: 276,
+      padding: 42,
     };
   }
 
@@ -692,16 +696,17 @@ function drawWater() {
 
 function drawCourse() {
   const day = getCurrentDay();
-  const scale = getVisualScale();
+  const objectScale = getObjectScale();
+  const uiScale = getBoardUiScale();
 
   ctx.save();
   day.hazards.forEach((hazard) => {
     if (art.shoal && art.shoal.complete) {
-      const size = hazard.r * 2.35 * scale;
+      const size = hazard.r * 2.35 * objectScale;
       ctx.drawImage(art.shoal, hazard.x - size / 2, hazard.y - size / 2, size, size);
       ctx.fillStyle = "rgba(132, 86, 53, 0.82)";
-      ctx.font = `bold ${Math.round(18 * scale)}px Trebuchet MS`;
-      ctx.fillText("Shoal", hazard.x - 24 * scale, hazard.y + 6 * scale);
+      ctx.font = `bold ${Math.round(18 * uiScale)}px Trebuchet MS`;
+      ctx.fillText("Shoal", hazard.x - 24 * uiScale, hazard.y + 6 * uiScale);
       return;
     }
 
@@ -741,27 +746,27 @@ function drawCourse() {
     });
 
     ctx.fillStyle = "rgba(132, 86, 53, 0.82)";
-    ctx.font = `bold ${Math.round(18 * scale)}px Trebuchet MS`;
-    ctx.fillText("Shoal", hazard.x - 24 * scale, hazard.y + 6 * scale);
+    ctx.font = `bold ${Math.round(18 * uiScale)}px Trebuchet MS`;
+    ctx.fillText("Shoal", hazard.x - 24 * uiScale, hazard.y + 6 * uiScale);
     ctx.restore();
   });
 
   markers.forEach((marker, index) => {
     if (art.marker && art.marker.complete) {
-      const size = marker.r * 3.2 * scale;
+      const size = marker.r * 3.2 * objectScale;
       ctx.drawImage(art.marker, marker.x - size / 2, marker.y - size / 2, size, size);
       ctx.beginPath();
-      ctx.arc(marker.x, marker.y - marker.r * 0.9 * scale, marker.r * 0.48 * scale, 0, Math.PI * 2);
+      ctx.arc(marker.x, marker.y - marker.r * 0.9 * objectScale, marker.r * 0.48 * objectScale, 0, Math.PI * 2);
       ctx.fillStyle = markerHits[index] ? "rgba(255, 232, 138, 0.96)" : "rgba(255, 250, 240, 0.94)";
       ctx.fill();
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = "rgba(53, 87, 122, 0.9)";
       ctx.stroke();
       ctx.fillStyle = "#35577a";
-      ctx.font = `bold ${Math.round(10 * scale)}px Trebuchet MS`;
+      ctx.font = `bold ${Math.round(10 * uiScale)}px Trebuchet MS`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(`${index + 1}`, marker.x, marker.y - marker.r * 0.9 * scale + 0.5);
+      ctx.fillText(`${index + 1}`, marker.x, marker.y - marker.r * 0.9 * objectScale + 0.5);
       ctx.textAlign = "start";
       ctx.textBaseline = "alphabetic";
       return;
@@ -783,8 +788,8 @@ function drawCourse() {
     ctx.stroke();
 
     ctx.fillStyle = "rgba(23, 50, 77, 0.72)";
-    ctx.font = `bold ${Math.round(18 * scale)}px Trebuchet MS`;
-    ctx.fillText(`${index + 1}`, marker.x - 5 * scale, marker.y + 6 * scale);
+    ctx.font = `bold ${Math.round(18 * uiScale)}px Trebuchet MS`;
+    ctx.fillText(`${index + 1}`, marker.x - 5 * uiScale, marker.y + 6 * uiScale);
   });
 
   const finishWidth = finishLine.x2 - finishLine.x1;
@@ -793,15 +798,15 @@ function drawCourse() {
     ctx.beginPath();
     ctx.moveTo(finishLine.x1 + i * segmentWidth, finishLine.y);
     ctx.lineTo(finishLine.x1 + (i + 1) * segmentWidth, finishLine.y);
-    ctx.lineWidth = 10 * scale;
+    ctx.lineWidth = 10 * uiScale;
     ctx.strokeStyle = i % 2 === 0 ? "#f8fbff" : "#244a65";
     ctx.stroke();
   }
 
   ctx.beginPath();
   ctx.fillStyle = "rgba(23, 50, 77, 0.75)";
-  ctx.font = `bold ${Math.round(28 * scale)}px Trebuchet MS`;
-  ctx.fillText("Finish", finishLine.x1 + 220 * scale * 0.9, finishLine.y - 16 * scale);
+  ctx.font = `bold ${Math.round(28 * uiScale)}px Trebuchet MS`;
+  ctx.fillText("Finish", finishLine.x1 + 220 * uiScale * 0.9, finishLine.y - 16 * uiScale);
 
   drawWindArrow(day.windAngle);
   ctx.restore();
@@ -809,7 +814,7 @@ function drawCourse() {
 
 function drawWindArrow(windAngleDegrees) {
   const angle = (windAngleDegrees * Math.PI) / 180;
-  const scale = getVisualScale();
+  const scale = getBoardUiScale();
   const cardX = 26;
   const cardY = 20;
   const cardW = 164 * scale;
@@ -850,7 +855,7 @@ function drawWindArrow(windAngleDegrees) {
 }
 
 function drawBoat() {
-  const scale = getVisualScale();
+  const scale = getObjectScale();
   if (art.sailboat && art.sailboat.complete) {
     ctx.save();
     ctx.translate(boat.x, boat.y);
@@ -944,7 +949,7 @@ function drawTraffic() {
 function drawTrafficVessel(traffic) {
   const name = traffic.type.name;
   const artImage = art[traffic.type.asset];
-  const scale = getVisualScale();
+  const scale = getObjectScale();
 
   if (artImage && artImage.complete) {
     ctx.rotate(Math.PI / 2);

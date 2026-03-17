@@ -568,174 +568,180 @@ button:disabled {
 
 @media (max-width: 430px) {
   :root {
-    --radius: 22px;
+    --radius: 18px;
   }
 
   .app {
     width: 100%;
     padding:
-      max(6px, env(safe-area-inset-top))
-      6px
-      calc(8px + env(safe-area-inset-bottom));
-    gap: 8px;
-  }
-
-  .game-panel {
-    padding: 8px;
-    gap: 6px;
-    border-radius: 22px;
-  }
-
-  .hud {
-    padding: 12px;
-    gap: 10px;
-    border-radius: 22px;
-  }
-
-  .race-bar {
-    gap: 8px;
-    padding: 2px 4px 0;
-  }
-
-  .race-copy {
+      max(2px, env(safe-area-inset-top))
+      3px
+      calc(6px + env(safe-area-inset-bottom));
     gap: 4px;
   }
 
+  .game-panel {
+    padding: 4px;
+    gap: 4px;
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(23, 50, 77, 0.1);
+  }
+
+  .hud {
+    padding: 10px;
+    gap: 8px;
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(23, 50, 77, 0.08);
+  }
+
+  .race-bar {
+    gap: 4px;
+    padding: 2px 5px 0;
+  }
+
+  .race-copy {
+    gap: 1px;
+  }
+
+  .race-copy .eyebrow {
+    display: none;
+  }
+
   .mobile-title {
-    font-size: clamp(2.45rem, 11vw, 3.15rem);
+    font-size: clamp(2.08rem, 9.4vw, 2.65rem);
     line-height: 0.9;
   }
 
   #day-name-compact {
-    font-size: 1.75rem;
+    font-size: 1.28rem;
     line-height: 0.95;
   }
 
   .race-copy p:last-child,
   #challenge-compact {
-    font-size: 1.02rem;
-    line-height: 1.24;
+    font-size: 0.84rem;
+    line-height: 1.12;
     max-width: none;
   }
 
   .race-stats {
-    gap: 10px;
+    gap: 6px;
   }
 
   .race-stat {
-    min-height: 84px;
-    padding: 12px 14px;
-    border-radius: 18px;
+    min-height: 60px;
+    padding: 8px 10px;
+    border-radius: 14px;
   }
 
   .race-stat .label {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
   }
 
   .race-stat strong {
-    margin-top: 6px;
-    font-size: 1.45rem;
+    margin-top: 2px;
+    font-size: 1.24rem;
     line-height: 1;
   }
 
   .canvas-shell {
-    margin-top: 2px;
+    margin-top: 0;
   }
 
   canvas {
-    height: clamp(540px, calc(100vw * 1.46), 680px);
-    border-radius: 22px;
+    height: clamp(620px, calc(100svh - 156px), 780px);
+    border-radius: 18px;
   }
 
   .start-overlay {
-    padding: 14px;
+    padding: 12px;
   }
 
   .start-card {
-    width: min(340px, 100%);
-    padding: 18px;
-    gap: 10px;
-    border-radius: 20px;
+    width: min(336px, 100%);
+    padding: 16px;
+    gap: 8px;
+    border-radius: 18px;
   }
 
   .start-card h2 {
-    font-size: 1.7rem;
+    font-size: 1.55rem;
   }
 
   .start-card p:not(.label) {
-    font-size: 1.08rem;
-    line-height: 1.28;
+    font-size: 1rem;
+    line-height: 1.22;
   }
 
   .primary-button,
   .secondary-button,
   .hud-drawer > summary {
-    min-height: 52px;
+    min-height: 50px;
   }
 
   .day-card {
-    gap: 10px;
+    gap: 8px;
   }
 
   .day-card h2 {
-    font-size: 1.6rem;
+    font-size: 1.42rem;
   }
 
   .day-actions {
-    gap: 10px;
+    gap: 8px;
   }
 
   .day-actions button {
-    padding: 12px 14px;
-    font-size: 1rem;
+    padding: 10px 12px;
+    font-size: 0.94rem;
   }
 
   .profile-card,
   .conditions,
   .stats {
-    gap: 10px;
+    gap: 8px;
   }
 
   .field,
   .challenge-card,
   .condition,
   .stat {
-    padding: 14px;
-    border-radius: 18px;
+    padding: 12px;
+    border-radius: 16px;
   }
 
   .challenge-card h2 {
-    font-size: 1.5rem;
+    font-size: 1.32rem;
   }
 
   .challenge-card p:not(.label),
   .instructions,
   .condition strong,
   .stat strong {
-    font-size: 1.08rem;
-    line-height: 1.28;
+    font-size: 1rem;
+    line-height: 1.22;
   }
 
   .instructions {
-    padding: 14px 16px;
-    border-radius: 18px;
+    padding: 12px 14px;
+    border-radius: 16px;
   }
 
   .controls-overlay {
-    right: calc(10px + env(safe-area-inset-right));
-    bottom: calc(10px + env(safe-area-inset-bottom));
+    right: calc(14px + env(safe-area-inset-right));
+    bottom: calc(14px + env(safe-area-inset-bottom));
   }
 
   .wheel-control {
-    width: 118px;
+    width: 134px;
   }
 
   .trim-button-overlay {
-    width: 52px;
-    height: 52px;
-    min-width: 52px;
-    min-height: 52px;
-    bottom: -6px;
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    min-height: 60px;
+    bottom: -8px;
   }
 }
 
